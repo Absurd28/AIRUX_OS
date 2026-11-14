@@ -1,0 +1,86 @@
+# Phase 2 check: 20 commands and the tool call AIRA should make first.
+# Paths are relative to the fixture home created by tests/phase2_check.py.
+# args matchers: equals (exact), path (same path after ~ expansion), contains (case-insensitive substring)
+# risky: true means the broker must ask before running it (the check denies every confirmation).
+
+- command: How much free disk space do I have in my home folder?
+  agent: system
+  tool: disk_usage
+- command: What GPU do I have and how hot is it?
+  agent: system
+  tool: gpu_status
+- command: Is the cron service running?
+  agent: system
+  tool: service_status
+  args: {name: {contains: cron}}
+- command: Restart the cron service.
+  agent: system
+  tool: service_control
+  args: {name: {contains: cron}, action: {equals: restart}}
+  risky: true
+- command: Install htop.
+  agent: system
+  tool: install_package
+  args: {name: {equals: htop}}
+  risky: true
+- command: Show me my network addresses.
+  agent: system
+  tool: network_status
+- command: What's in my notes folder?
+  agent: desktop
+  tool: list_dir
+  args: {path: {path: ~/notes}}
+- command: Find all CSV files in my home folder.
+  agent: desktop
+  tool: find_files
+  args: {pattern: {contains: csv}}
+- command: Delete old.log in my home folder.
+  agent: desktop
+  tool: delete_path
+  args: {path: {path: ~/old.log}}
+  risky: true
+- command: Rename ~/Documents/report.txt to ~/Documents/report-final.txt
+  agent: desktop
+  tool: move_path
+  args: {source: {path: ~/Documents/report.txt}, destination: {path: ~/Documents/report-final.txt}}
+- command: Create a file ~/todo.txt that says buy milk.
+  agent: desktop
+  tool: write_file
+  args: {path: {path: ~/todo.txt}, content: {contains: milk}}
+- command: What's the git status of ~/projects/demo?
+  agent: dev
+  tool: git_status
+  args: {repo: {path: ~/projects/demo}}
+- command: Run the tests in ~/projects/demo and tell me what failed.
+  agent: dev
+  tool: run_tests
+  args: {path: {path: ~/projects/demo}}
+- command: Show the last 5 commits in ~/projects/demo.
+  agent: dev
+  tool: git_log
+  args: {repo: {path: ~/projects/demo}, count: {equals: 5}}
+- command: Create a Python virtual environment at ~/envs/ml.
+  agent: dev
+  tool: python_env
+  args: {action: {equals: create}, path: {path: ~/envs/ml}}
+- command: Search my notes for transformer divergence.
+  agent: research
+  tool: search_notes
+  args: {query: {contains: transformer}}
+- command: How many rows and columns does ~/data/results.csv have?
+  agent: research
+  tool: dataset_info
+  args: {path: {path: ~/data/results.csv}}
+- command: Find papers on arXiv about sparse attention.
+  agent: research
+  tool: arxiv_search
+  args: {query: {contains: sparse attention}}
+  risky: true
+- command: Remind me in 2 minutes to check the training run.
+  agent: assistant
+  tool: add_reminder
+  args: {text: {contains: training run}, when: {contains: "2 minute"}}
+- command: Remember that my thesis deadline is March 3rd.
+  agent: assistant
+  tool: remember
+  args: {fact: {contains: thesis}}

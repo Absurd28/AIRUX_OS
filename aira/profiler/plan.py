@@ -26,6 +26,7 @@ from .probe import GiB, Hardware
 
 TIER_ORDER = ["2B", "4B", "9B", "27B"]
 RESERVE = 2 * GiB
+CACHE_RAM_MAX = 1 * GiB
 DEFAULT_CTX_PER_SLOT = 8192
 F16 = 2
 F32 = 4
@@ -52,6 +53,7 @@ class Plan:
     slots_uncapped: int
     ctx_per_slot: int
     per_slot_bytes: int
+    cache_ram_mib: int = 0   # llama-server --cache-ram (host prompt cache; its default 8192 MiB OOMs small machines)
     reasons: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
@@ -152,8 +154,14 @@ def plan(hw: Hardware, models_dir: Path, ctx_per_slot: int = DEFAULT_CTX_PER_SLO
     if max_slots is not None and slots > max_slots:
         slots = max(1, max_slots)
         reasons.append(f"slots capped at {slots} by --max-slots")
+    # RAM prompt cache: only what is left in RAM after the whole model, reserve and slots
+    # (counted as if all in RAM, the worst case), capped at CACHE_RAM_MAX.
+    ram_spare = hw.ram_available - chosen.size - RESERVE - slots * psb
+    cache_ram_mib = int(max(0, min(ram_spare, CACHE_RAM_MAX)) // 2**20)
+    reasons.append(f"RAM prompt cache {cache_ram_mib} MiB (spare RAM {ram_spare / GiB:.2f} GiB, cap "
+                   f"{CACHE_RAM_MAX // 2**20} MiB)")
     return Plan(
         tier_by_rule=by_rule, tier=chosen.tier, model=chosen.name, model_path=str(chosen.path),
         model_size=chosen.size, use_gpu=hw.vram_total > 0, slots=slots, slots_uncapped=int(uncapped),
-        ctx_per_slot=ctx_per_slot, per_slot_bytes=psb, reasons=reasons,
+        ctx_per_slot=ctx_per_slot, per_slot_bytes=psb, cache_ram_mib=cache_ram_mib, reasons=reasons,
     )

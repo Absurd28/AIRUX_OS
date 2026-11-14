@@ -50,6 +50,7 @@ def server_command(p: Plan, port: int, host: str = "127.0.0.1") -> list[str]:
         "--jinja", "--reasoning", "off",
         "--parallel", str(p.slots), "--ctx-size", str(p.slots * p.ctx_per_slot),
         "--no-kv-unified",  # each slot keeps its own ctx_per_slot window
+        "--cache-ram", str(p.cache_ram_mib),  # bounded; llama.cpp's default (8192 MiB) can OOM
     ]
     if not p.use_gpu:
         cmd += ["--n-gpu-layers", "0"]

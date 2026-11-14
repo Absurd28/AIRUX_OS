@@ -182,6 +182,19 @@ def test_plan_slots_formula_and_minimum(fake_models):
     assert p2.slots_uncapped == 0 and p2.slots == 1
 
 
+def test_plan_cache_ram_bounded(fake_models):
+    # this laptop under WSL: 7 GiB free RAM cannot hold 9B (5.3) + reserve (2) -> no RAM cache
+    p = planmod.plan(hw(7.6, 6, free_ram_gb=7.0), fake_models)
+    assert p.cache_ram_mib == 0
+    # plenty of RAM -> capped at 1 GiB
+    p = planmod.plan(hw(64, 0, free_ram_gb=60), fake_models)
+    assert p.cache_ram_mib == 1024
+    # in between -> exactly the spare
+    p = planmod.plan(hw(16, 0, free_ram_gb=8.3), fake_models)
+    spare = int(8.3 * GiB) - p.model_size - 2 * GiB - p.slots * p.per_slot_bytes
+    assert p.cache_ram_mib == max(0, min(spare, GiB)) // 2**20
+
+
 def test_plan_max_slots(fake_models):
     p = planmod.plan(hw(7.6, 6, free_ram_gb=7.0), fake_models, max_slots=2)
     assert p.slots == 2 and p.slots_uncapped > 2
