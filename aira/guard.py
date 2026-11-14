@@ -10,6 +10,7 @@ Layer 7  reply checker: numbers, paths and names in a reply must appear in the e
 """
 from __future__ import annotations
 
+import datetime as dt
 import difflib
 import json
 import re
@@ -107,6 +108,11 @@ UNIT_RE = re.compile(r"(-?\d+(?:\.\d+)?)\s*(GB|MB|TB)\b")
 ABBREVIATIONS = {"e.g", "i.e", "a.m", "p.m", "etc.", "vs."}
 
 
+NUMBER_WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8,
+                "nine": 9, "ten": 10, "eleven": 11, "twelve": 12, "fifteen": 15, "twenty": 20, "thirty": 30,
+                "forty": 40, "fifty": 50, "sixty": 60, "ninety": 90, "hundred": 100}
+
+
 @dataclass
 class Evidence:
     texts: list[str] = field(default_factory=list)
@@ -133,7 +139,14 @@ class Evidence:
         return "\n".join(self.texts)
 
     def numbers(self) -> list[float]:
-        out = [float(x) for x in NUM_RE.findall(self.blob.replace("\\n", " "))]
+        blob = self.blob.replace("\\n", " ")
+        # "2026-11-14T17:46" holds an hour and a minute; a reply may say 17:46 or 5:46 pm
+        blob = re.sub(r"(\d)T(\d)", r"\1 \2", blob)
+        out = [float(x) for x in NUM_RE.findall(blob)]
+        for h, _m in re.findall(r"\b(\d{1,2}):(\d{2})\b", blob):
+            out.append(float(int(h) % 12 or 12))
+        # numbers the user said as words ("in two minutes") support the same digits in the reply
+        out += [float(NUMBER_WORDS[w]) for w in re.findall(r"[a-z]+", blob.lower()) if w in NUMBER_WORDS]
         return out + [float(n) for n in self.list_lengths]
 
 
@@ -195,7 +208,26 @@ def check_reply(reply: str, ev: Evidence) -> list[str]:
     for value, unit in UNIT_RE.findall(reply):
         if unit == "GB" and float(value) in ev.gib_values:
             problems.append(f"{value} is in GiB, not GB")
+    problems += _day_word_problems(reply, blob)
     return problems
+
+
+ISO_DATE = re.compile(r"\b(20\d\d-\d\d-\d\d)(?=[T\s\"']|$)")
+
+
+def _day_word_problems(reply: str, blob: str, today: dt.date | None = None) -> list[str]:
+    """"today" / "tomorrow" in the reply must match the dates in the tool results (when there are any)."""
+    dates = {dt.date.fromisoformat(d) for d in ISO_DATE.findall(blob)}
+    if not dates:
+        return []
+    today = today or dt.date.today()
+    said = {w.lower() for w in re.findall(r"\b(today|tonight|tomorrow)\b", reply, re.I)}
+    out = []
+    if "tomorrow" in said and today + dt.timedelta(days=1) not in dates:
+        out.append(f"says tomorrow, but the dates in the tool results are {sorted(str(d) for d in dates)}")
+    if said & {"today", "tonight"} and today not in dates:
+        out.append(f"says today, but the dates in the tool results are {sorted(str(d) for d in dates)}")
+    return out
 
 
 # ---------------- layer 3: topics no tool can see ----------------
@@ -299,6 +331,20 @@ def status_lines(steps) -> list[str]:
     return lines
 
 
+UNIT_SUFFIXES = (("_gib", " GiB"), ("_mib", " MiB"), ("_percent", "%"), ("_c", " °C"), ("_w", " W"),
+                 ("_seconds", " s"))
+
+
+def _speakable(key: str, value) -> str:
+    """"free_gib", 2.82 -> "free 2.82 GiB"; "due", "2026-11-14T18:52" -> "due 2026-11-14 18:52"."""
+    if isinstance(value, str):
+        value = re.sub(r"(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})", r"\1 \2", value)
+    for suffix, unit in UNIT_SUFFIXES:
+        if key.endswith(suffix) and isinstance(value, (int, float)) and not isinstance(value, bool):
+            return f"{key[: -len(suffix)].replace('_', ' ')} {value}{unit}"
+    return f"{key.replace('_', ' ')}: {value}"
+
+
 def compact(obj, limit: int = 500) -> str:
     """Short human rendering of a tool result for fallback replies."""
     if isinstance(obj, dict):
@@ -307,7 +353,7 @@ def compact(obj, limit: int = 500) -> str:
             if isinstance(v, (dict, list)):
                 v = json.dumps(v, default=str)
                 v = v if len(v) < 160 else v[:160] + "..."
-            parts.append(f"{k}: {v}")
+            parts.append(_speakable(str(k), v))
         s = "; ".join(parts)
     else:
         s = str(obj)

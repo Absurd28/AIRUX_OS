@@ -62,6 +62,7 @@ for f in "$P"/systemd/system/*.service; do install -Dm644 "$f" "$STAGE/usr/lib/s
 for f in "$P"/systemd/user/*.service; do install -Dm644 "$f" "$STAGE/usr/lib/systemd/user/$(basename "$f")"; done
 install -Dm644 "$P/polkit/50-aira.rules" "$STAGE/usr/share/polkit-1/rules.d/50-aira.rules"
 install -Dm644 "$P/xdg/autostart/aira-shell.desktop" "$STAGE/etc/xdg/autostart/aira-shell.desktop"
+install -Dm644 "$P/xdg/autostart/aira-services.desktop" "$STAGE/etc/xdg/autostart/aira-services.desktop"
 install -Dm644 "$P/xdg/autostart/aira-shell.desktop" "$STAGE/usr/share/applications/aira.desktop"
 sed -i '/^OnlyShowIn=/d;/^X-GNOME-Autostart/d' "$STAGE/usr/share/applications/aira.desktop"
 install -Dm644 "$P/branding/aira-icon.svg" "$STAGE/usr/share/icons/hicolor/scalable/apps/aira.svg"

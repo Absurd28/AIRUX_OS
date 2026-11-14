@@ -65,6 +65,9 @@ def gecos_first_name() -> list[str]:
     except (KeyError, ImportError):
         return []
     first = full.split()[0] if full else ""
+    # the live session's account is called "AIRUX": not a person's name, so AIRA uses no name
+    if first.lower() in {"airux", "aira", "debian", "live", "user", "admin", "root"}:
+        return []
     return [first] if first and first.isalpha() else []
 
 

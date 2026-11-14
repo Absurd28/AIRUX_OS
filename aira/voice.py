@@ -30,7 +30,32 @@ from .tts import DEFAULT_VOICE, FEMALE_VOICES, PiperSpeaker, Speaker, choose_spe
 DIDNT_CATCH = "Sorry, I didn't catch that."
 # Words AIRUX users say that a general speech model mishears; passed to whisper as its prompt.
 VOCABULARY = ("AIRA, AIRUX, Neovim, Vim, VS Code, PyTorch, TensorFlow, NumPy, pandas, Jupyter, Podman, "
-              "Docker, Postgres, arXiv, LaTeX, git, GPU, CUDA, systemd, Debian, Xfce, venv, pytest.")
+              "Docker, Postgres, arXiv, LaTeX, git, GPU, CUDA, systemd, Debian, Xfce, venv, pytest. "
+              "Files: notes.txt, demo.txt, report.pdf, data.csv, main.py, README.md.")
+# spoken file names: "demo dot txt", "demo, TXT", "demo.TXD" -> "demo.txt"
+EXTENSIONS = {"txt": "txt", "txd": "txt", "md": "md", "pdf": "pdf", "csv": "csv", "tsv": "tsv", "py": "py",
+              "json": "json", "ipynb": "ipynb", "tex": "tex", "log": "log", "yaml": "yaml", "sh": "sh"}
+_SPOKEN_EXT = re.compile(r"\b([A-Za-z0-9_-]+)(?:\s+dot\s+|\s*,\s+|\.)(" + "|".join(EXTENSIONS) + r")\b",
+                         re.I)
+
+
+# "demo. TXD": a period and a space only before extensions that are not English words, so
+# "Check the training. Log the results." stays two sentences
+_SPACED_EXT = re.compile(r"\b([A-Za-z0-9_-]+)\.\s(txt|txd|pdf|csv|tsv|py|json|yaml|ipynb)\b", re.I)
+
+
+def normalise_transcript(text: str) -> str:
+    """whisper's usual slips for AIRUX: AIRA's name written "IRA", and spoken file names."""
+    return normalise_file_names(re.sub(r"\bIRA\b", "AIRA", text))
+
+
+def normalise_file_names(text: str) -> str:
+    """Join a spoken file name and its extension the way the user meant it."""
+    def join(m: re.Match) -> str:
+        return f"{m.group(1)}.{EXTENSIONS[m.group(2).lower()]}"
+    return _SPACED_EXT.sub(join, _SPOKEN_EXT.sub(join, text))
+
+
 # whisper's markers for non-speech, and very short noise
 NON_SPEECH = re.compile(r"^\s*(\[[^\]]*\]|\([^)]*\)|\.+)?\s*$")
 
@@ -59,7 +84,7 @@ class Transcriber:
                                      headers={"Content-Type": f"multipart/form-data; boundary={boundary}"})
         try:
             with urllib.request.urlopen(req, timeout=self.timeout) as r:
-                return json.loads(r.read()).get("text", "").strip()
+                return normalise_transcript(json.loads(r.read()).get("text", "").strip())
         except (urllib.error.URLError, TimeoutError, ConnectionError, ValueError) as exc:
             raise STTError(f"speech recognition unavailable at {self.url}: {exc}") from exc
 

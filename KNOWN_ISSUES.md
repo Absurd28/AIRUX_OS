@@ -30,6 +30,13 @@ The phase each issue was found in is in brackets.
 - **An ambiguous command can get a social reply.** "Delete it." got "Anytime." instead of "Delete
   what?" Nothing runs and nothing is claimed, but the router sometimes reads a bare command as
   thanks. Recorded in the evaluation (docs/EVAL.md, case 173). [9]
+- **The "done without read-back" rule (layer 6) can blank a harmless reply.** It replaces the whole
+  reply, so a recall answer that says something was "saved" can become "I'm not sure. I can't
+  confirm that anything changed." This was seen once for "What do you know about me?" in phase 5.
+  It is safe, but unhelpful. A finer rule would drop only the claiming sentence. [9]
+- **Results vary between runs.** Risky calls are sampled three times at temperature 0.7 (layer
+  5), so the same command can pass in one run and miss in the next. Phase 5 passed 8/10, then
+  10/10 on the same code. [9]
 - **Small talk can offer things that do not apply.** For example, it offered a GPU check on a VM
   with no GPU. The reply checker stops invented facts and "done" claims, not irrelevant offers.
   [8, 9]
@@ -40,6 +47,10 @@ The phase each issue was found in is in brackets.
   Legacy BIOS can boot the live system but cannot install it. [8]
 - **`hwclock` is missing** (util-linux-extra), so Calamares cannot set the hardware clock. The
   install still completes. [8]
+- **Fixed in phase 9 after the QEMU demo dry run:**
+  - Reminders never fired on Xfce: the user services waited for graphical-session.target, which
+    Xfce never starts. They are now started by XDG autostart.
+  - The live account's name "AIRUX" was used as the user's name.
 - **Untested on real hardware so far:** Secure Boot (the stick boots through Debian's signed shim),
   Wi-Fi firmware, laptop audio and microphones, suspend, screen lock. [9: see docs/DEMO.md]
 
@@ -48,8 +59,7 @@ The phase each issue was found in is in brackets.
 - **CPU-only replies are slow.** In a 4-core VM with the 2B model, one spoken command took 27–48 s.
   [8]
 - **Evaluation:** 2.5% errors on 200 commands (9B, development machine), with no unconfirmed risky
-  calls and no unverified "done". About 1.5% after the last fix (not re-run in full).
-  See docs/EVAL.md. [9]
+  calls. The only flagged "done" is a detector false positive. See docs/EVAL.md. [9]
 - **The 9B model is slowed by slots on a 6 GB GPU.** The model and the parallel slots compete for
   VRAM, so speed is traded for slots. The median on the development machine (9B, 3 slots) is
   12 s per command. [1, 9]

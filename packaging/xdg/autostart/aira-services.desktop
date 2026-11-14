@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=AIRA background services
+Comment=Starts AIRA's reminder daemon and login briefing (Xfce does not start graphical-session.target)
+Exec=systemctl --user start aira-reminderd.service aira-briefing.service
+NoDisplay=true
+X-GNOME-Autostart-enabled=true

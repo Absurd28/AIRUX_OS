@@ -189,3 +189,25 @@ def test_playback_failure_is_reported_not_hidden():
     assert "not spoken" not in turn_report(ok)
     off = VoiceTurn("a.wav", "hello", spoken="Hi boss.", speech={"spoken": False, "error": "playback disabled"})
     assert "not spoken" not in turn_report(off)
+
+
+@pytest.mark.parametrize("heard,meant", [
+    ("Create a file called demo, TXD in my home folder.", "Create a file called demo.txt in my home folder."),
+    ("Read notes dot md please", "Read notes.md please"),
+    ("Delete demo.TXT in my home folder.", "Delete demo.txt in my home folder."),
+    ("Open report dot PDF", "Open report.pdf"),
+    ("Create a file called demo. TXD in my home folder", "Create a file called demo.txt in my home folder"),
+    ("Check the training. Log the results.", "Check the training. Log the results."),
+    ("Summarise results.csv", "Summarise results.csv"),
+    ("I like text, and I like code.", "I like text, and I like code."),
+    ("Write it down, please. Python is fun.", "Write it down, please. Python is fun."),
+])
+def test_spoken_file_names_are_joined(heard, meant):
+    from aira.voice import normalise_file_names
+    assert normalise_file_names(heard) == meant
+
+
+def test_transcript_fixes_airas_name_but_not_ira():
+    from aira.voice import normalise_transcript
+    assert normalise_transcript("Write hello from IRA in demo. TXD") == "Write hello from AIRA in demo.txt"
+    assert normalise_transcript("Remind me to call Ira.") == "Remind me to call Ira."

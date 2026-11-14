@@ -198,3 +198,12 @@ def test_memory_voice_commands_skip_the_router(tmp_path, monkeypatch):
     turn = orch.handle("Pause memory.")
     assert [r["agent"] for r in turn.route] == ["assistant"]
     assert executed == ["memory_control"] and orch.vault.paused
+
+
+def test_live_account_name_is_not_used_as_a_name(monkeypatch):
+    import pwd
+    from types import SimpleNamespace
+    monkeypatch.setattr(pwd, "getpwuid", lambda uid: SimpleNamespace(pw_gecos="AIRUX,,,"))
+    assert persona_mod.gecos_first_name() == []
+    monkeypatch.setattr(pwd, "getpwuid", lambda uid: SimpleNamespace(pw_gecos="Aryan Example,,,"))
+    assert persona_mod.gecos_first_name() == ["Aryan"]

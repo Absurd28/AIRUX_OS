@@ -341,3 +341,37 @@ def test_router_unsupported_and_chat(home, tmp_path):
     about = orch.handle("Who are you?").reply
     assert "Adaptive Intelligent Research Assistant" in about
     assert "chat" in str(orch.router_schema) and "reply" not in str(orch.router_schema)
+
+
+def test_reply_checker_accepts_clock_times_and_spoken_numbers():
+    # demo dry run: "at 17:46" and "in 2 minutes" were rejected against due "2026-11-14T17:46"
+    ev = guard.Evidence()
+    ev.add("Remind me in two minutes to stretch.")
+    ev.add({"id": 5, "text": "stretch", "due": "2026-11-14T17:46"})
+    for ok in ("I'll remind you to stretch at 17:46.", "Stretch reminder set for 5:46 pm.",
+               "Stretch reminder set for 2 minutes from now."):
+        assert guard.check_reply(ok, ev) == [], ok
+    assert guard.check_reply("Stretch reminder set for 18:30.", ev) != []
+    assert guard.check_reply("You also have 3 meetings today.", ev) != []
+
+
+def test_reply_checker_catches_wrong_day_words():
+    # demo dry run: due today at 18:52, AIRA said "set for tomorrow at 6:52 PM"
+    today = dt.date.today()
+    ev = guard.Evidence()
+    ev.add("Remind me in two minutes to stretch.")
+    ev.add({"id": 5, "text": "stretch", "due": f"{today.isoformat()}T18:52"})
+    assert any("tomorrow" in p for p in guard.check_reply("Set for tomorrow at 6:52 PM.", ev))
+    assert guard.check_reply("Set for today at 6:52 PM.", ev) == []
+    tomorrow = today + dt.timedelta(days=1)
+    ev2 = guard.Evidence()
+    ev2.add({"id": 6, "text": "call home", "due": f"{tomorrow.isoformat()}T09:00"})
+    assert guard.check_reply("Set for tomorrow at 9:00.", ev2) == []
+    assert any("today" in p for p in guard.check_reply("Set for today at 9:00.", ev2))
+    assert guard.check_reply("Nothing on today.", guard.Evidence()) == []   # no dates: no check
+
+
+def test_fallback_is_speakable():
+    s = guard.compact({"path": "/home/a", "total_gib": 2.89, "free_gib": 2.82, "used_percent": 2.6,
+                       "due": "2026-11-14T18:52", "temperature_c": 47})
+    assert s == "path: /home/a; total 2.89 GiB; free 2.82 GiB; used 2.6%; due: 2026-11-14 18:52; temperature 47 °C"
