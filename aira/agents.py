@@ -1,7 +1,9 @@
 """Sub-agents: one system prompt and up to 8 tools each, all served by the same model.
 
-Each step is a single JSON object constrained by a schema built from the agent's tools:
-exactly one of its tools with valid arguments, or `reply`, or `ask_user`.
+Each step is a single JSON object constrained by a schema built from the agent's tools
+(grounding layer 1). Every step then passes the grounding guard (aira.guard) in this order:
+entity check (2) -> agreement for risky calls (5) -> permission broker -> read-back (6);
+the final reply goes through facts-only (3), failure notes (4) and the reply checker (7).
 """
 from __future__ import annotations
 
@@ -9,28 +11,34 @@ import datetime as dt
 import json
 from dataclasses import dataclass, field
 
+from . import guard
 from .broker import Broker
 from .llm import LLM, LLMError
 from .tools.base import Registry, ToolResult
 
 PERSONA = ("You are part of AIRA (Adaptive Intelligent Research Assistant), the assistant built into AIRUX. "
            "Be calm, brief and direct. Never guess: if a file, app, service, container, event or fact "
-           "is not confirmed by a tool result, say you are not sure or ask. Never invent tool results.")
+           "is not confirmed by a tool result, say you are not sure or ask. Never invent tool results. "
+           "\"I'm not sure\" is a correct answer when the tools do not show the answer.")
 
 ROLES = {
     "system": "You are AIRA's System agent: settings, power, network, services, packages, GPU and disk health.",
     "desktop": "You are AIRA's Desktop agent: files and folders, applications and the clipboard.",
     "dev": "You are AIRA's Dev agent: git, tests, terminal commands, Podman containers, Python environments.",
-    "research": "You are AIRA's Research agent: local notes and papers, datasets, and arXiv search.",
+    "research": "You are AIRA's Research agent: local notes and papers, datasets (row and column counts), "
+                "and arXiv search.",
     "assistant": "You are AIRA's Assistant agent: reminders, calendar events, and facts remembered about the user.",
 }
 
 RULES = """Rules:
 - Answer with one JSON object: {"tool": <name>, "args": {...}}.
 - Use a tool to act or to look something up. After a tool result, either call another tool or finish.
-- Finish with {"tool": "reply", "args": {"text": ...}}: a short answer based only on the tool results.
+- Finish with {"tool": "reply", "args": {"text": ...}}: a short answer using only values that appear in
+  the tool results, with the same units (GiB stays GiB). If the results do not answer the question,
+  reply "I'm not sure" and say what you could not find.
 - If the request is unclear, a needed detail is missing, or something does not exist,
   use {"tool": "ask_user", "args": {"question": ...}} instead of guessing.
+- If no tool can answer the question, reply "I'm not sure" rather than answering from memory.
 - If a tool fails or is denied, say so plainly in the reply. Do not retry the same call.
 - Paths: use exactly what the user said. The home folder is ~ and things in it are ~/name
   (for example ~/notes, ~/old.log), never ~name. Do not invent paths."""
@@ -41,6 +49,9 @@ META = {
     "ask_user": {"type": "object", "properties": {"question": {"type": "string"}}, "required": ["question"],
                  "additionalProperties": False},
 }
+REPLY_ONLY = {"type": "object", "properties": {"tool": {"const": "reply"}, "args": META["reply"]},
+              "required": ["tool", "args"], "additionalProperties": False}
+AGREEMENT_SAMPLES = 3
 
 
 @dataclass
@@ -49,6 +60,9 @@ class Step:
     args: dict
     decision: str = ""
     result: dict | None = None
+    mutating: bool = False
+    verified: bool = False
+    readback: str = ""
 
 
 @dataclass
@@ -58,6 +72,7 @@ class AgentRun:
     steps: list[Step] = field(default_factory=list)
     outcome: str = ""        # "reply", "ask", "error", "step_limit"
     text: str = ""
+    guard_events: list[str] = field(default_factory=list)
 
     @property
     def tool_calls(self) -> list[Step]:
@@ -68,6 +83,7 @@ class SubAgent:
     def __init__(self, name: str, registry: Registry, llm: LLM, broker: Broker, slot: int | None,
                  max_steps: int = 4, user_name: str = ""):
         self.name = name
+        self.registry = registry
         self.tools = registry.for_agent(name)
         assert len(self.tools) <= 8, f"{name} has {len(self.tools)} tools"
         self.llm, self.broker, self.slot, self.max_steps = llm, broker, slot, max_steps
@@ -88,9 +104,10 @@ class SubAgent:
         who = f" The user's name is {self.user_name}." if self.user_name else ""
         return f"{PERSONA}{who}\n{ROLES[self.name]}\n\nTools:\n{tools}\n- reply(text)\n- ask_user(question)\n\n{RULES}"
 
-    def propose(self, messages: list[dict], seed: int | None = None, temperature: float = 0.0) -> dict:
+    def propose(self, messages: list[dict], seed: int | None = None, temperature: float = 0.0,
+                schema: dict | None = None) -> dict:
         """One constrained model step (no execution)."""
-        c = self.llm.chat(messages, self.schema, slot=self.slot, temperature=temperature,
+        c = self.llm.chat(messages, schema or self.schema, slot=self.slot, temperature=temperature,
                           max_tokens=400, seed=seed)
         return c.data or {}
 
@@ -100,41 +117,143 @@ class SubAgent:
         return [{"role": "system", "content": self.system_prompt},
                 {"role": "user", "content": f"[{now:%A %Y-%m-%d %H:%M}] {task}"}]
 
-    def run(self, task: str) -> AgentRun:
+    # ------------------------------------------------------------------ run
+    def run(self, task: str, command: str = "") -> AgentRun:
         out = AgentRun(self.name, task)
         messages = self.first_messages(task)
-        for _ in range(self.max_steps):
-            try:
+        evidence = guard.Evidence()
+        evidence.add(command or task)
+        evidence.add(task)
+        try:
+            for _ in range(self.max_steps):
                 step = self.propose(messages)
-            except LLMError as exc:
-                out.outcome, out.text = "error", f"I couldn't reach the model: {exc}"
-                return out
-            tool, args = step.get("tool", ""), step.get("args", {})
-            if tool == "reply":
-                out.steps.append(Step(tool, args))
-                out.outcome, out.text = "reply", args.get("text", "")
-                return out
-            if tool == "ask_user":
-                out.steps.append(Step(tool, args))
-                out.outcome, out.text = "ask", args.get("question", "")
-                return out
-            decision, result = self.broker.execute(self.name, tool, args)
-            out.steps.append(Step(tool, args, decision.reason, result.to_dict()))
-            messages.append({"role": "assistant", "content": json.dumps(step)})
-            messages.append({"role": "user", "content": _result_message(tool, decision.reason, result)})
+                tool, args = step.get("tool", ""), step.get("args", {})
+                if tool == "ask_user":
+                    out.steps.append(Step(tool, args))
+                    return self._ask(out, args.get("question", ""))
+                if tool == "reply":
+                    out.steps.append(Step(tool, args))
+                    return self._finish(out, messages, args.get("text", ""), evidence)
+
+                t = self.registry.get(tool)
+                if t is not None:
+                    # layer 2: entity check
+                    missing = guard.missing_entities(t, args)
+                    if missing:
+                        out.steps.append(Step(tool, args, "blocked: missing " + ", ".join(f"{k} {v}" for k, v in missing)))
+                        out.guard_events.append(f"L2 blocked {tool}: missing {missing}")
+                        return self._ask(out, guard.entity_question(missing))
+                    # layer 5: agreement on risky calls
+                    if t.needs_confirmation(args):
+                        samples = [step] + [self.propose(messages, seed=1000 + i, temperature=0.7)
+                                            for i in range(AGREEMENT_SAMPLES - 1)]
+                        chosen = guard.agree(samples)
+                        out.guard_events.append(f"L5 samples {[guard.normalise_call(s) for s in samples]}")
+                        if chosen is None or chosen.get("tool") in META:
+                            out.steps.append(Step(tool, args, "blocked: samples disagree"))
+                            opts = sorted({f"{s.get('tool')}({json.dumps(s.get('args'))})" for s in samples})
+                            return self._ask(out, "I'm not sure exactly what you want me to do. I considered: "
+                                             + "; ".join(opts) + ". Which one do you mean")
+                        tool, args = chosen["tool"], chosen["args"]
+                        t = self.registry.get(tool)
+                        missing = guard.missing_entities(t, args) if t else []
+                        if missing:
+                            out.steps.append(Step(tool, args, "blocked: missing entity"))
+                            return self._ask(out, guard.entity_question(missing))
+
+                decision, result = self.broker.execute(self.name, tool, args)
+                s = Step(tool, args, decision.reason, result.to_dict())
+                if t is not None and result.ok and t.mutates(args):
+                    # layer 6: read-back
+                    s.mutating = True
+                    if t.readback is None:
+                        s.verified, s.readback = False, "its effect cannot be checked automatically"
+                    else:
+                        try:
+                            s.verified, s.readback = t.readback(args, result.data)
+                        except Exception as exc:
+                            s.verified, s.readback = False, f"read-back failed: {exc}"
+                    out.guard_events.append(f"L6 {tool} verified={s.verified}: {s.readback}")
+                out.steps.append(s)
+                evidence.add(result.data if result.ok else {"error": result.error})
+                # layer 4: a lookup that fails twice means stop, never keep guessing arguments
+                if not result.ok and sum(1 for c in out.tool_calls if c.tool == tool
+                                         and not (c.result or {}).get("ok")) >= 2:
+                    out.guard_events.append(f"L4 {tool} failed twice: stopping")
+                    out.outcome = "reply"
+                    out.text = "\n".join([f"{guard.NOT_SURE} {tool} failed twice, so I stopped."]
+                                         + guard.status_lines(out.tool_calls))
+                    return out
+                messages.append({"role": "assistant", "content": json.dumps({"tool": tool, "args": args})})
+                messages.append({"role": "user", "content": _result_message(tool, decision.reason, result, s)})
+        except LLMError as exc:
+            out.outcome = "error"
+            out.text = "\n".join([f"{guard.COULDNT_VERIFY}: I couldn't reach the model ({exc})."]
+                                 + guard.status_lines(out.tool_calls))
+            return out
         out.outcome = "step_limit"
-        out.text = "I stopped after several steps without finishing. " + _summary(out)
+        out.text = "\n".join([f"{guard.NOT_SURE} I stopped after {self.max_steps} steps without finishing."]
+                             + guard.status_lines(out.tool_calls))
+        return out
+
+    def _ask(self, out: AgentRun, question: str) -> AgentRun:
+        q = question.strip() or "Can you tell me more about what you want"
+        if not q.endswith("?"):
+            q = q.rstrip(".") + "?"
+        lines = guard.status_lines(out.tool_calls)
+        out.outcome, out.text = "ask", "\n".join(lines + [q])
+        return out
+
+    def _finish(self, out: AgentRun, messages: list[dict], text: str, ev: guard.Evidence) -> AgentRun:
+        calls = out.tool_calls
+        ok_calls = [s for s in calls if (s.result or {}).get("ok")]
+        lines = guard.status_lines(calls)
+        out.outcome = "reply"
+        # layer 3: no successful tool result -> no facts
+        if not ok_calls:
+            if not calls:
+                out.guard_events.append("L3 reply without any tool result replaced")
+                out.text = f"{guard.NOT_SURE} I don't have a tool result that answers this."
+            else:
+                out.guard_events.append("L3/L4 reply after only failed calls replaced by status")
+                out.text = "\n".join(lines)
+            return out
+        # layer 7: reply checker, one regeneration, then a code-built fallback
+        problems = guard.check_reply(text, ev)
+        if problems:
+            out.guard_events.append(f"L7 problems: {problems}")
+            fb = messages + [
+                {"role": "assistant", "content": json.dumps({"tool": "reply", "args": {"text": text}})},
+                {"role": "user", "content": "Your reply contains things that are not in the tool results: "
+                 + "; ".join(problems) + ". Reply again using only values exactly as they appear in the "
+                 "tool results, with the same units."}]
+            try:
+                text = self.propose(fb, schema=REPLY_ONLY).get("args", {}).get("text", "")
+            except LLMError:
+                text = ""
+            problems = guard.check_reply(text, ev)
+            if problems:
+                out.guard_events.append(f"L7 still wrong after regeneration: {problems}; using tool output")
+                last = ok_calls[-1]
+                text = (f"{guard.NOT_SURE[:-1]} how to answer that exactly. Here is what {last.tool} returned: "
+                        f"{guard.compact(last.result.get('data'))}")
+        # layer 6: no "done" unless a state change was read back
+        mutations = [s for s in calls if s.mutating]
+        if guard.claims_done(text) and not any(s.verified for s in mutations):
+            out.guard_events.append("L6 'done' claim without verified read-back removed")
+            text = guard.NOT_SURE + " I can't confirm that anything changed."
+        # layer 9: "the information is not there" is always said as "I'm not sure"
+        normalised = guard.normalise_abstention(text)
+        if normalised != text:
+            out.guard_events.append("L9 unavailability reply normalised to 'I'm not sure'")
+            text = normalised
+        out.text = "\n".join([text] + lines) if text else "\n".join(lines)
         return out
 
 
-def _result_message(tool: str, decision: str, result: ToolResult) -> str:
+def _result_message(tool: str, decision: str, result: ToolResult, step: Step) -> str:
     body = json.dumps(result.to_dict(), default=str)
     if len(body) > 6000:
         body = body[:6000] + "...(truncated)"
-    return f"TOOL RESULT for {tool} ({decision}):\n{body}"
-
-
-def _summary(run: AgentRun) -> str:
-    parts = [f"{s.tool}: {'ok' if (s.result or {}).get('ok') else (s.result or {}).get('error', '')}"
-             for s in run.tool_calls]
-    return "Steps: " + "; ".join(parts) if parts else ""
+    rb = f"\nREAD-BACK: {'verified' if step.verified else 'NOT verified'}: {step.readback}" if step.mutating else ""
+    return f"TOOL RESULT for {tool} ({decision}):\n{body}{rb}"

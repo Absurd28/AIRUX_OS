@@ -8,7 +8,7 @@ import shutil
 import time
 from pathlib import Path
 
-from .base import I, Registry, Risk, S, Tool, ToolError, expand, privileged, run, truncate
+from .base import I, Registry, Risk, S, Tool, ToolError, exists_path, expand, privileged, run, truncate
 
 SERVICE_RE = re.compile(r"^[A-Za-z0-9@._:\-]+$")
 PACKAGE_RE = re.compile(r"^[a-z0-9][a-z0-9+.\-]+$")
@@ -119,23 +119,59 @@ def network_status() -> dict:
             "dns_servers": re.findall(r"^nameserver\s+(\S+)", dns, re.M)}
 
 
+def service_exists(name: str) -> bool:
+    if not SERVICE_RE.match(name):
+        return False
+    import subprocess
+    unit = name if "." in name else name + ".service"
+    r = subprocess.run(["systemctl", "show", unit, "--property=LoadState", "--value"],
+                       capture_output=True, text=True, timeout=20)
+    return r.stdout.strip() not in ("not-found", "")
+
+
+def package_known(name: str) -> bool:
+    import subprocess
+    if not PACKAGE_RE.match(name):
+        return False
+    return subprocess.run(["apt-cache", "show", name], capture_output=True, timeout=30).returncode == 0
+
+
+def _service_readback(args: dict, result) -> tuple[bool, str]:
+    st = service_status(args["name"])
+    want = "inactive" if args["action"] == "stop" else "active"
+    return st.get("ActiveState") == want, f"{st['unit']} is {st.get('ActiveState')} (expected {want})"
+
+
+def _package_readback(args: dict, result) -> tuple[bool, str]:
+    import subprocess
+    r = subprocess.run(["dpkg-query", "-W", "-f=${Status}", args["name"]], capture_output=True, text=True)
+    ok = "install ok installed" in r.stdout
+    return ok, f"{args['name']} is {'installed' if ok else 'not installed'}"
+
+
 def register(reg: Registry) -> None:
     A = "system"
     reg.add(Tool("system_info", A, "OS, kernel, uptime, CPU load and memory of this machine",
                  {}, [], system_info))
     reg.add(Tool("disk_usage", A, "total/used/free space of the disk holding a path",
-                 {"path": S("a path on the disk, e.g. ~ or /")}, [], disk_usage))
+                 {"path": S("a path on the disk, e.g. ~ or /")}, [], disk_usage,
+                 entities=lambda a: [exists_path(a["path"])] if a.get("path") else []))
     reg.add(Tool("gpu_status", A, "GPU name, temperature, utilisation, memory, power", {}, [], gpu_status))
     reg.add(Tool("list_services", A, "list systemd services, optionally filtered by name",
                  {"pattern": S("substring of the service name"),
                   "state": S("which services", enum=["running", "failed", "all"])}, [], list_services))
     reg.add(Tool("service_status", A, "status of one systemd service", {"name": S("service name")},
-                 ["name"], service_status))
+                 ["name"], service_status,
+                 entities=lambda a: [("service", a["name"], service_exists(a["name"]))]))
     reg.add(Tool("service_control", A, "start, stop or restart a systemd service (needs root)",
                  {"name": S("service name"), "action": S("what to do", enum=["start", "stop", "restart"])},
-                 ["name", "action"], service_control, frozenset({Risk.ROOT})))
+                 ["name", "action"], service_control, frozenset({Risk.ROOT}),
+                 entities=lambda a: [("service", a["name"], service_exists(a["name"]))],
+                 readback=_service_readback, changes_state=True))
     reg.add(Tool("install_package", A, "install a Debian package with apt (needs root and network)",
                  {"name": S("exact Debian package name")}, ["name"], install_package,
-                 frozenset({Risk.INSTALL, Risk.ROOT})))
+                 frozenset({Risk.INSTALL, Risk.ROOT}),
+                 entities=lambda a: [("package", a["name"], package_known(a["name"]))],
+                 readback=_package_readback, changes_state=True))
     reg.add(Tool("network_status", A, "network interfaces, addresses, default route, DNS servers",
                  {}, [], network_status))

@@ -13,7 +13,8 @@ import subprocess
 import urllib.parse
 from pathlib import Path
 
-from .base import I, Registry, Risk, S, Tool, ToolError, expand, run, truncate
+from .base import (I, Registry, Risk, S, Tool, ToolError, exists_dir, exists_path, expand, parent_dir, run,
+                   truncate)
 
 TEXT_LIMIT = 20000
 APP_DIRS = [Path("/usr/share/applications"), Path("/usr/local/share/applications"),
@@ -170,28 +171,96 @@ def clipboard(action: str, text: str = "") -> dict:
     return {"copied_chars": len(text)}
 
 
+def _write_entities(a: dict) -> list:
+    if a.get("append"):
+        return [exists_path(a["path"], "file")]
+    return [parent_dir(a["path"])]
+
+
+def _write_readback(a: dict, result) -> tuple[bool, str]:
+    p = expand(a["path"])
+    if not p.is_file():
+        return False, f"{p} does not exist after writing"
+    text = p.read_text(errors="replace")
+    ok = text.endswith(a["content"]) if a.get("append") else text == a["content"]
+    return ok, f"{p} contains the {'appended ' if a.get('append') else ''}text" if ok else f"{p} content differs"
+
+
+def _move_entities(a: dict) -> list:
+    dst = None
+    try:
+        d = expand(a["destination"])
+        dst = ("folder", str(d if d.is_dir() else d.parent), d.is_dir() or d.parent.is_dir())
+    except ToolError:
+        dst = ("folder", a["destination"], False)
+    return [exists_path(a["source"]), dst]
+
+
+def _move_readback(a: dict, result) -> tuple[bool, str]:
+    src, dst = Path(result["moved_from"]), Path(result["moved_to"])
+    ok = dst.exists() and not src.exists()
+    return ok, f"{dst} exists and {src} is gone" if ok else f"move not confirmed: dst exists={dst.exists()}, src exists={src.exists()}"
+
+
+def _delete_readback(a: dict, result) -> tuple[bool, str]:
+    p, t = Path(result["deleted"]), Path(result["trash_location"])
+    ok = not p.exists() and t.exists()
+    return ok, f"{p} is gone and is in the trash" if ok else f"delete not confirmed: still exists={p.exists()}"
+
+
+def _app_entities(a: dict) -> list:
+    name = a["name"]
+    found = _find_desktop_entry(name) is not None or shutil.which(name) is not None
+    out = [("application", name, found)]
+    t = a.get("target", "")
+    if t and not t.startswith(("http://", "https://")):
+        out.append(exists_path(t, "file"))
+    return out
+
+
+def _app_readback(a: dict, result) -> tuple[bool, str]:
+    import time
+    time.sleep(1.0)
+    alive = Path(f"/proc/{result['pid']}").exists()
+    return alive, f"{result['launched']} is running (pid {result['pid']})" if alive else \
+        f"{result['launched']} exited right after starting"
+
+
+def _clipboard_readback(a: dict, result) -> tuple[bool, str]:
+    got = clipboard("get")["text"]
+    ok = got == a.get("text", "")
+    return ok, "clipboard holds the text" if ok else "clipboard content differs"
+
+
 def register(reg: Registry) -> None:
     A = "desktop"
     reg.add(Tool("list_dir", A, "list the files and folders in a folder",
-                 {"path": S("folder path"), "show_hidden": {"type": "boolean"}}, ["path"], list_dir))
+                 {"path": S("folder path"), "show_hidden": {"type": "boolean"}}, ["path"], list_dir,
+                 entities=lambda a: [exists_dir(a["path"])]))
     reg.add(Tool("find_files", A, "find files or folders by name pattern under a folder",
                  {"pattern": S("name or glob, e.g. *.pdf or report"), "root": S("folder to search, default ~"),
-                  "max_results": I("limit", 1, 500)}, ["pattern"], find_files))
+                  "max_results": I("limit", 1, 500)}, ["pattern"], find_files,
+                 entities=lambda a: [exists_dir(a["root"])] if a.get("root") else []))
     reg.add(Tool("read_file", A, "read a text file", {"path": S("file path"), "max_chars": I("limit", 1, 20000)},
-                 ["path"], read_file))
+                 ["path"], read_file, entities=lambda a: [exists_path(a["path"], "file")]))
     reg.add(Tool("write_file", A, "write text to a file (creates it, overwrites it, or appends)",
                  {"path": S("file path"), "content": S("text to write"), "append": {"type": "boolean"}},
-                 ["path", "content"], write_file, _write_risk))
+                 ["path", "content"], write_file, _write_risk, entities=_write_entities,
+                 readback=_write_readback, changes_state=True))
     reg.add(Tool("move_path", A, "move or rename a file or folder",
                  {"source": S("existing path"), "destination": S("new path or folder")},
-                 ["source", "destination"], move_path, _move_risk))
+                 ["source", "destination"], move_path, _move_risk, entities=_move_entities,
+                 readback=_move_readback, changes_state=True))
     reg.add(Tool("delete_path", A, "delete a file or folder (moves it to the trash)",
-                 {"path": S("path to delete")}, ["path"], delete_path, frozenset({Risk.DELETE})))
+                 {"path": S("path to delete")}, ["path"], delete_path, frozenset({Risk.DELETE}),
+                 entities=lambda a: [exists_path(a["path"])], readback=_delete_readback, changes_state=True))
     reg.add(Tool("open_app", A, "open an installed application, optionally with a file or URL",
                  {"name": S("application name, e.g. firefox, code, libreoffice"),
                   "target": S("file path or URL to open with it")}, ["name"], open_app,
-                 frozenset({Risk.WRITE})))
+                 frozenset({Risk.WRITE}), entities=_app_entities, readback=_app_readback, changes_state=True))
     reg.add(Tool("clipboard", A, "get the clipboard text or copy text to it",
                  {"action": S("get or set", enum=["get", "set"]), "text": S("text to copy for set")},
                  ["action"], clipboard,
-                 lambda a: {Risk.WRITE} if a.get("action") == "set" else {Risk.READ}))
+                 lambda a: {Risk.WRITE} if a.get("action") == "set" else {Risk.READ},
+                 readback=lambda a, r: _clipboard_readback(a, r) if a.get("action") == "set" else (True, "read"),
+                 changes_state=lambda a: a.get("action") == "set"))

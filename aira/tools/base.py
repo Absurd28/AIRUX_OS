@@ -58,6 +58,15 @@ class Tool:
     required: list[str]
     handler: Callable[..., Any]
     risk: Callable[[dict], set[Risk]] | frozenset[Risk] = frozenset({Risk.READ})
+    # grounding layer 2: things the call refers to, as (kind, value, exists)
+    entities: Callable[[dict], list[tuple[str, str, bool]]] | None = None
+    # grounding layer 6: after a successful call, check the new state -> (verified, detail)
+    readback: Callable[[dict, Any], tuple[bool, str]] | None = None
+    # whether a successful call changes state (and so may only be reported "done" after read-back)
+    changes_state: bool | Callable[[dict], bool] = False
+
+    def mutates(self, args: dict) -> bool:
+        return self.changes_state(args) if callable(self.changes_state) else self.changes_state
 
     def risks(self, args: dict) -> set[Risk]:
         r = self.risk(args) if callable(self.risk) else self.risk
@@ -146,6 +155,29 @@ def run(cmd: list[str], timeout: float = 60, cwd: str | Path | None = None,
 def privileged(cmd: list[str]) -> list[str]:
     """Prefix sudo -n when not root: never prompts; fails plainly if not permitted."""
     return cmd if os.geteuid() == 0 else ["sudo", "-n", *cmd]
+
+
+def exists_path(path: str, kind: str = "path") -> tuple[str, str, bool]:
+    """Entity triple for a path; an ambiguous ~name path counts as missing."""
+    try:
+        return (kind, path, expand(path).exists())
+    except ToolError:
+        return (kind, path, False)
+
+
+def exists_dir(path: str, kind: str = "folder") -> tuple[str, str, bool]:
+    try:
+        return (kind, path, expand(path).is_dir())
+    except ToolError:
+        return (kind, path, False)
+
+
+def parent_dir(path: str) -> tuple[str, str, bool]:
+    try:
+        p = expand(path)
+    except ToolError:
+        return ("folder", path, False)
+    return ("folder", str(p.parent), p.parent.is_dir())
 
 
 def truncate(text: str, limit: int = 4000) -> str:

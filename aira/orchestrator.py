@@ -20,9 +20,19 @@ ROUTER_RULES = """You are AIRA's orchestrator. Split the user's command into tas
 Answer with one JSON object, one of:
 - {{"route": [{{"agent": <agent>, "task": <instruction for that agent>}}, ...]}}: one task per agent needed.
   Keep each task self-contained and keep the user's exact names, paths and times.
-- {{"reply": <text>}}: only for greetings or questions about AIRA itself that need no tool.
+- {{"chat": "greeting" | "thanks" | "about"}}: a greeting, thanks, or a question about who AIRA is.
 - {{"ask": <question>}}: if the command is too unclear to route.
-Never answer questions about the system, files, schedule or the web yourself: route them."""
+- {{"unsupported": true}}: if no agent above has a way to find this out (for example the weather,
+  prices, other people's private information, or things only the user knows).
+Never answer questions yourself: route them, ask, or say unsupported."""
+
+CHAT = {
+    "greeting": "Hello{name}. I'm AIRA, your Adaptive Intelligent Research Assistant. What can I do for you?",
+    "thanks": "You're welcome{name}.",
+    "about": ("I'm AIRA, the Adaptive Intelligent Research Assistant built into AIRUX. I can check and control "
+              "the system, your files, code, research material and your schedule, and I ask before anything risky."),
+}
+UNSUPPORTED = "I'm not sure. I don't have a tool that can check that."
 
 
 @dataclass
@@ -59,9 +69,11 @@ class Orchestrator:
                 "type": "object", "properties": {"agent": {"enum": list(AGENTS)}, "task": {"type": "string"}},
                 "required": ["agent", "task"], "additionalProperties": False}}},
              "required": ["route"], "additionalProperties": False},
-            {"type": "object", "properties": {"reply": {"type": "string"}}, "required": ["reply"],
+            {"type": "object", "properties": {"chat": {"enum": list(CHAT)}}, "required": ["chat"],
              "additionalProperties": False},
             {"type": "object", "properties": {"ask": {"type": "string"}}, "required": ["ask"],
+             "additionalProperties": False},
+            {"type": "object", "properties": {"unsupported": {"const": True}}, "required": ["unsupported"],
              "additionalProperties": False},
         ]}
 
@@ -78,11 +90,17 @@ class Orchestrator:
         except LLMError as exc:
             turn.kind, turn.reply = "error", f"I couldn't reach the model: {exc}"
             return turn
-        if "reply" in r:
-            turn.kind, turn.reply = "reply", r["reply"]
+        # the router never writes free-text answers (grounding layer 3): only fixed texts
+        name = f", {self.config.user_name}" if self.config.user_name else ""
+        if "chat" in r:
+            turn.kind, turn.reply = "reply", CHAT[r["chat"]].format(name=name)
+            return turn
+        if "unsupported" in r:
+            turn.kind, turn.reply = "unsupported", UNSUPPORTED
             return turn
         if "ask" in r:
-            turn.kind, turn.reply = "ask", r["ask"]
+            q = r["ask"].strip()
+            turn.kind, turn.reply = "ask", q if q.endswith("?") else q.rstrip(".") + "?"
             return turn
         # merge duplicate agents into one task each
         tasks: dict[str, str] = {}
@@ -90,7 +108,7 @@ class Orchestrator:
             tasks[t["agent"]] = (tasks[t["agent"]] + " Also: " + t["task"]) if t["agent"] in tasks else t["task"]
         turn.route = [{"agent": a, "task": t} for a, t in tasks.items()]
         with ThreadPoolExecutor(max_workers=min(len(tasks), self.slots) or 1) as pool:
-            turn.runs = list(pool.map(lambda kv: self.agents[kv[0]].run(kv[1]), tasks.items()))
+            turn.runs = list(pool.map(lambda kv: self.agents[kv[0]].run(kv[1], command), tasks.items()))
         turn.kind = "ask" if any(run.outcome == "ask" for run in turn.runs) else "routed"
         turn.reply = "\n".join(run.text for run in turn.runs if run.text)
         return turn

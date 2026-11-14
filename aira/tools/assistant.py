@@ -11,7 +11,7 @@ import sqlite3
 import threading
 from pathlib import Path
 
-from .base import I, Registry, Risk, S, Tool, ToolError, expand
+from .base import I, Registry, Risk, S, Tool, ToolError, exists_path, expand
 from .timeparse import parse_when
 
 SCHEMA = """
@@ -132,25 +132,62 @@ def make_tools(store: Store) -> list[Tool]:
                     (ev["title"], ev["start"], ev.get("end"), ev.get("location"), str(p)))
         return {"file": str(p), "imported": len(events)}
 
+    def time_entity(*keys: str):
+        """Layer 2: a time that cannot be parsed is a missing detail -> ask before calling."""
+        def ent(a: dict) -> list:
+            out = []
+            for k in keys:
+                if a.get(k):
+                    try:
+                        parse_when(a[k], store.clock())
+                        out.append(("time", a[k], True))
+                    except ValueError:
+                        out.append(("time", repr(a[k]), False))
+            return out
+        return ent
+
+    def row_readback(table: str):
+        def rb(a: dict, result) -> tuple[bool, str]:
+            rows = store.q(f"SELECT id FROM {table} WHERE id=?", (result["id"],))
+            return bool(rows), f"{table[:-1]} {result['id']} is stored" if rows else f"{table[:-1]} not found"
+        return rb
+
+    def forget_readback(a: dict, result) -> tuple[bool, str]:
+        terms = [t for t in re.findall(r"\w+", a["topic"].lower()) if len(t) > 2]
+        left = 0
+        for table, col in (("facts", "text"), ("reminders", "text"), ("events", "title")):
+            left += sum(1 for r in store.q(f"SELECT {col} AS t FROM {table}")
+                        if all(t in r["t"].lower() for t in terms))
+        return left == 0, "nothing about it remains" if left == 0 else f"{left} items still match"
+
+    def import_readback(a: dict, result) -> tuple[bool, str]:
+        n = store.q("SELECT count(*) AS n FROM events WHERE source=?", (result["file"],))[0]["n"]
+        return n >= result["imported"], f"{n} events from {result['file']} are stored"
+
     return [
         Tool("add_reminder", A, "set a reminder; when is plain words like 'in 2 minutes', '18:30', 'tomorrow 9am'",
              {"text": S("what to remind about"), "when": S("when, in plain words")}, ["text", "when"],
-             add_reminder, frozenset({Risk.WRITE})),
+             add_reminder, frozenset({Risk.WRITE}), entities=time_entity("when"),
+             readback=row_readback("reminders"), changes_state=True),
         Tool("list_reminders", A, "list upcoming reminders", {"include_done": {"type": "boolean"}}, [],
              list_reminders),
         Tool("add_event", A, "add a calendar event; times in plain words like 'tomorrow 14:00'",
              {"title": S("event title"), "start": S("start time"), "end": S("end time"),
-              "location": S("where")}, ["title", "start"], add_event, frozenset({Risk.WRITE})),
+              "location": S("where")}, ["title", "start"], add_event, frozenset({Risk.WRITE}),
+             entities=time_entity("start", "end"), readback=row_readback("events"), changes_state=True),
         Tool("list_events", A, "list calendar events for a day", {"day": S("today, tomorrow or YYYY-MM-DD")},
              [], list_events),
         Tool("remember", A, "remember a fact about the user for later", {"fact": S("the fact")}, ["fact"],
-             remember, frozenset({Risk.WRITE})),
+             remember, frozenset({Risk.WRITE}), readback=lambda a, r: row_readback("facts")(a, r),
+             changes_state=True),
         Tool("recall", A, "look up what AIRA remembers, optionally about a topic", {"query": S("topic")}, [],
              recall),
         Tool("forget", A, "forget everything remembered about a topic", {"topic": S("topic to forget")},
-             ["topic"], forget, frozenset({Risk.DELETE})),
+             ["topic"], forget, frozenset({Risk.DELETE}), readback=forget_readback, changes_state=True),
         Tool("import_calendar", A, "import events from an .ics calendar file", {"path": S(".ics file path")},
-             ["path"], import_calendar, frozenset({Risk.WRITE})),
+             ["path"], import_calendar, frozenset({Risk.WRITE}),
+             entities=lambda a: [exists_path(a["path"], "calendar file")], readback=import_readback,
+             changes_state=True),
     ]
 
 

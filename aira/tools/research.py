@@ -12,7 +12,7 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from .base import I, Registry, Risk, S, Tool, ToolError, expand, run, truncate
+from .base import I, Registry, Risk, S, Tool, ToolError, exists_dir, exists_path, expand, run, truncate
 
 NOTE_EXT = {".md", ".txt", ".org", ".rst", ".tex", ".py", ".ipynb"}
 
@@ -115,11 +115,14 @@ def register(reg: Registry) -> None:
     A = "research"
     reg.add(Tool("search_notes", A, "search local notes, papers' text files and code for words",
                  {"query": S("words to find"), "folder": S("folder to search, default ~"),
-                  "max_results": I("limit", 1, 100)}, ["query"], search_notes))
+                  "max_results": I("limit", 1, 100)}, ["query"], search_notes,
+                 entities=lambda a: [exists_dir(a["folder"])] if a.get("folder") else []))
     reg.add(Tool("read_document", A, "read the text of a PDF, Markdown or text document",
-                 {"path": S("document path"), "max_chars": I("limit", 100, 50000)}, ["path"], read_document))
-    reg.add(Tool("dataset_info", A, "rows, columns and a preview of a CSV/TSV dataset",
-                 {"path": S("dataset path"), "preview_rows": I("rows to show", 0, 50)}, ["path"], dataset_info))
+                 {"path": S("document path"), "max_chars": I("limit", 100, 50000)}, ["path"], read_document,
+                 entities=lambda a: [exists_path(a["path"], "document")]))
+    reg.add(Tool("dataset_info", A, "rows (not counting the header), columns and a preview of a CSV/TSV dataset",
+                 {"path": S("dataset path"), "preview_rows": I("rows to show", 0, 50)}, ["path"], dataset_info,
+                 entities=lambda a: [exists_path(a["path"], "dataset")]))
     reg.add(Tool("arxiv_search", A, "search arXiv for papers (sends the query to arxiv.org)",
                  {"query": S("search terms"), "max_results": I("how many", 1, 25)}, ["query"], arxiv_search,
                  frozenset({Risk.SEND_OFF})))

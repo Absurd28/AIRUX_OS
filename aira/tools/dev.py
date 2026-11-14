@@ -2,13 +2,15 @@
 from __future__ import annotations
 
 import json
+import re
 import shlex
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-from .base import I, Registry, Risk, S, Tool, ToolError, expand, run, truncate
+from .base import (I, Registry, Risk, S, Tool, ToolError, exists_dir, expand, parent_dir, run,
+                   truncate)
 
 NAME_RE_CHARS = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.-")
 
@@ -142,29 +144,94 @@ def python_env(action: str, path: str, package: str = "") -> dict:
     raise ToolError(f"unknown action {action}")
 
 
+def _is_repo(path: str) -> bool:
+    try:
+        _repo(path)
+        return True
+    except ToolError:
+        return False
+
+
+def _repo_entities(a: dict) -> list:
+    folder = exists_dir(a["repo"])
+    if not folder[2]:
+        return [folder]
+    return [("git repository", a["repo"], _is_repo(a["repo"]))]
+
+
+def _commit_readback(a: dict, result) -> tuple[bool, str]:
+    head = run(["git", "-C", result["repo"], "log", "-1", "--format=%h %s"]).strip()
+    ok = head == result["committed"]
+    return ok, f"HEAD is {head}" if ok else f"HEAD is {head}, expected {result['committed']}"
+
+
+def _container_exists(name: str) -> bool:
+    try:
+        return name in [c["name"] for c in container_list()["containers"]]
+    except ToolError:
+        return False
+
+
+def _container_readback(a: dict, result) -> tuple[bool, str]:
+    names = {c["name"]: c["state"] for c in container_list()["containers"]}
+    if a["action"] == "rm":
+        return a["name"] not in names, f"{a['name']} {'removed' if a['name'] not in names else 'still exists'}"
+    want = "exited" if a["action"] == "stop" else "running"
+    st = names.get(a["name"], "missing")
+    return st == want, f"{a['name']} is {st} (expected {want})"
+
+
+def _env_entities(a: dict) -> list:
+    if a["action"] == "create":
+        return [parent_dir(a["path"])]
+    try:
+        ok = (expand(a["path"]) / "bin" / "python").exists()
+    except ToolError:
+        ok = False
+    return [("Python environment", a["path"], ok)]
+
+
+def _env_readback(a: dict, result) -> tuple[bool, str]:
+    py = expand(a["path"]) / "bin" / "python"
+    if a["action"] == "create":
+        return py.exists(), f"{py} {'exists' if py.exists() else 'missing'}"
+    if a["action"] == "install":
+        name = re.split(r"[=<>\[~ ]", a.get("package", ""), maxsplit=1)[0]
+        r = subprocess.run([str(py), "-m", "pip", "show", name], capture_output=True, text=True)
+        return r.returncode == 0, f"{name} {'is' if r.returncode == 0 else 'is not'} installed"
+    return True, "read only"
+
+
 def register(reg: Registry) -> None:
     A = "dev"
     reg.add(Tool("git_status", A, "branch and uncommitted changes of a git repository",
-                 {"repo": S("repository folder")}, ["repo"], git_status))
+                 {"repo": S("repository folder")}, ["repo"], git_status, entities=_repo_entities))
     reg.add(Tool("git_log", A, "recent commits of a git repository",
-                 {"repo": S("repository folder"), "count": I("how many", 1, 100)}, ["repo"], git_log))
+                 {"repo": S("repository folder"), "count": I("how many", 1, 100)}, ["repo"], git_log,
+                 entities=_repo_entities))
     reg.add(Tool("git_commit", A, "commit changes in a git repository",
                  {"repo": S("repository folder"), "message": S("commit message"),
                   "all_changes": {"type": "boolean"}}, ["repo", "message"], git_commit,
-                 frozenset({Risk.WRITE})))
+                 frozenset({Risk.WRITE}), entities=_repo_entities, readback=_commit_readback, changes_state=True))
     reg.add(Tool("run_tests", A, "run a project's test suite (pytest, npm, cargo or make) and report failures",
-                 {"path": S("project folder")}, ["path"], run_tests, frozenset({Risk.WRITE})))
+                 {"path": S("project folder")}, ["path"], run_tests, frozenset({Risk.WRITE}),
+                 entities=lambda a: [exists_dir(a["path"], "project folder")]))
     reg.add(Tool("run_command", A, "run a shell command in a terminal (always asks first)",
                  {"command": S("shell command"), "cwd": S("working folder")}, ["command"], run_command,
-                 _command_risk))
+                 _command_risk, entities=lambda a: [exists_dir(a["cwd"])] if a.get("cwd") else [],
+                 changes_state=True))  # effect cannot be read back in general: never reported "done"
     reg.add(Tool("container_list", A, "list Podman containers and their state",
                  {"all_containers": {"type": "boolean"}}, [], container_list))
     reg.add(Tool("container_control", A, "start, stop, restart or remove a Podman container",
                  {"name": S("container name"), "action": S("what to do", enum=["start", "stop", "restart", "rm"])},
                  ["name", "action"], container_control,
-                 lambda a: {Risk.DELETE} if a.get("action") in ("stop", "rm") else {Risk.WRITE}))
+                 lambda a: {Risk.DELETE} if a.get("action") in ("stop", "rm") else {Risk.WRITE},
+                 entities=lambda a: [("container", a["name"], _container_exists(a["name"]))],
+                 readback=_container_readback, changes_state=True))
     reg.add(Tool("python_env", A, "create a Python virtual environment, list or install its packages",
                  {"action": S("what to do", enum=["create", "list", "install"]), "path": S("environment folder"),
                   "package": S("package to install, e.g. numpy==2.1.0")}, ["action", "path"], python_env,
                  lambda a: {Risk.INSTALL, Risk.SEND_OFF} if a.get("action") == "install"
-                 else ({Risk.WRITE} if a.get("action") == "create" else {Risk.READ})))
+                 else ({Risk.WRITE} if a.get("action") == "create" else {Risk.READ}),
+                 entities=_env_entities, readback=_env_readback,
+                 changes_state=lambda a: a.get("action") in ("create", "install")))
