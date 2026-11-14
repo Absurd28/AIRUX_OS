@@ -7,4 +7,5 @@ dependencies = []  # runtime deps are pinned in requirements.lock as phases add 
 
 [tool.pytest.ini_options]
 testpaths = ["tests/unit"]
+pythonpath = [".", "tests/unit"]
 addopts = "-q -p no:cacheprovider"

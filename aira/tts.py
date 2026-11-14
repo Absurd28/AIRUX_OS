@@ -16,6 +16,11 @@ from pathlib import Path
 
 MODELS = Path(os.environ.get("AIRUX_WORK", "/srv/airux-work")) / "models"
 DEFAULT_VOICE = "af_heart"
+# female Kokoro presets AIRA may switch to by voice ("change your voice to Bella")
+FEMALE_VOICES = {"heart": "af_heart", "bella": "af_bella", "nicole": "af_nicole", "sarah": "af_sarah",
+                 "sky": "af_sky", "nova": "af_nova", "emma": "bf_emma", "isabella": "bf_isabella"}
+PIPER_VOICE = "en_US-ljspeech-medium"
+FALLBACK_BELOW_BYTES = 6 * 1024 ** 3   # CLAUDE.md: Piper female voice under 6 GB of memory
 
 
 class Speaker:
@@ -68,3 +73,32 @@ class Speaker:
             if r.returncode != 0:
                 return {"spoken": False, "wav": str(out), "error": r.stderr.strip() or f"paplay exit {r.returncode}"}
             return {"spoken": True, "wav": str(out), "seconds": round(seconds, 2)}
+
+
+class PiperSpeaker(Speaker):
+    """Fallback voice for machines under 6 GB: Piper (GPL-3.0) run as a separate program,
+    voice en_US-ljspeech-medium (public-domain LJ Speech dataset)."""
+
+    def __init__(self, out_dir: Path | None = None, play: bool = True):
+        super().__init__(voice=PIPER_VOICE, out_dir=out_dir, play=play)
+
+    def voices(self) -> list[str]:
+        return [PIPER_VOICE]
+
+    def synth(self, text: str, path: Path) -> float:
+        import sys
+        path.parent.mkdir(parents=True, exist_ok=True)
+        r = subprocess.run([sys.executable, "-m", "piper", "-m", str(MODELS / f"{PIPER_VOICE}.onnx"), "-f", str(path)],
+                           input=text, capture_output=True, text=True, timeout=120)
+        if r.returncode != 0:
+            raise RuntimeError(r.stderr.strip()[-300:] or f"piper exit {r.returncode}")
+        with wave.open(str(path)) as w:
+            return w.getnframes() / w.getframerate()
+
+
+def choose_speaker(total_memory: int, voice: str = DEFAULT_VOICE, out_dir: Path | None = None,
+                   play: bool = True) -> Speaker:
+    """Kokoro normally; Piper under 6 GB of total memory (CLAUDE.md)."""
+    if total_memory < FALLBACK_BELOW_BYTES:
+        return PiperSpeaker(out_dir=out_dir, play=play)
+    return Speaker(voice=voice, out_dir=out_dir, play=play)

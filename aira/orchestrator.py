@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import re
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 
@@ -14,6 +15,7 @@ from .memory.embed import Embedder
 from .memory.keys import get_key
 from .memory.vault import Vault
 from .tools import build_registry
+from .tts import FEMALE_VOICES
 from .tools.base import AGENTS, Registry
 
 ROUTER_RULES = """You are AIRA's orchestrator. Split the user's command into tasks for these agents:
@@ -26,6 +28,7 @@ Answer with one JSON object, one of:
 - {{"ask": <question>}}: if the command is too unclear to route.
 - {{"unsupported": true}}: if no agent above has a way to find this out (for example the weather,
   prices, other people's private information, or things only the user knows).
+- {{"voice": <name>}}: the user asks AIRA to change its voice to one of: {voices}.
 Never answer questions yourself: route them, ask, or say unsupported."""
 
 CHAT = {
@@ -71,7 +74,8 @@ class Orchestrator:
                                       user_name=config.user_name)
                        for i, name in enumerate(AGENTS)}
         self.router_prompt = PERSONA + "\n" + ROUTER_RULES.format(
-            agents="\n".join(f"- {a}: {ROLES[a].split(': ', 1)[1]}" for a in AGENTS))
+            agents="\n".join(f"- {a}: {ROLES[a].split(': ', 1)[1]}" for a in AGENTS),
+            voices=", ".join(n.capitalize() for n in FEMALE_VOICES))
         self.router_schema = {"oneOf": [
             {"type": "object", "properties": {"route": {"type": "array", "minItems": 1, "maxItems": 5, "items": {
                 "type": "object", "properties": {"agent": {"enum": list(AGENTS)}, "task": {"type": "string"}},
@@ -82,6 +86,8 @@ class Orchestrator:
             {"type": "object", "properties": {"ask": {"type": "string"}}, "required": ["ask"],
              "additionalProperties": False},
             {"type": "object", "properties": {"unsupported": {"const": True}}, "required": ["unsupported"],
+             "additionalProperties": False},
+            {"type": "object", "properties": {"voice": {"enum": list(FEMALE_VOICES)}}, "required": ["voice"],
              "additionalProperties": False},
         ]}
 
@@ -123,6 +129,21 @@ class Orchestrator:
             return turn
         if "unsupported" in r:
             turn.kind, turn.reply = "unsupported", UNSUPPORTED
+            return turn
+        if "voice" in r:
+            # the voice comes from the user's own words, not the model's pick (grounding)
+            said = [v for v in FEMALE_VOICES if re.search(rf"\b{v}\b", command.lower())]
+            choice = said[0] if len(said) == 1 else (r["voice"] if r["voice"] in said else None)
+            if choice is None:
+                turn.kind = "ask"
+                turn.reply = ("Which voice would you like: "
+                              + ", ".join(v.capitalize() for v in FEMALE_VOICES) + "?")
+                return turn
+            self.vault.set_setting("voice", FEMALE_VOICES[choice])
+            ok = self.vault.setting("voice") == FEMALE_VOICES[choice]  # read-back
+            turn.kind = "voice"
+            turn.reply = (f"Okay{name}, I'll speak with the {choice.capitalize()} voice from now on."
+                          if ok else "I couldn't verify that the voice was changed.")
             return turn
         if "ask" in r:
             q = r["ask"].strip()

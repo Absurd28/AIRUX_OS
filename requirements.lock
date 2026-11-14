@@ -1,0 +1,19 @@
+# AIRA runtime dependencies, pinned (direct deps marked; the rest are what they pull in).
+# Everything else AIRA uses is the Python standard library.
+sqlcipher3==0.6.5          # direct: encrypted vault (bundles SQLCipher 4.20.0)
+sqlite-vec==0.1.9          # direct: vector search in the vault
+kokoro-onnx==0.6.1         # direct: AIRA's voice (Kokoro-82M)
+piper-tts==1.8.0           # direct: fallback voice, GPL-3.0, run as a separate program (python -m piper)
+onnxruntime==1.32.0
+numpy==2.5.4
+espeakng-loader==0.2.4
+phonemizer==3.6.0
+attrs==26.1.0
+cloudpickle==3.1.2
+dlinfo==2.0.0
+flatbuffers==25.12.19
+joblib==1.6.0
+packaging==26.3
+pathvalidate==3.3.1
+protobuf==7.36.2
+typing-extensions==4.16.0

@@ -1,11 +1,38 @@
 # Licences of shipped third-party components
 
+## Models and voices
+
 | Component | Use | Licence | Source |
 | --- | --- | --- | --- |
 | Qwen3.5 2B / 4B / 9B (Q4_K_M GGUF, Unsloth builds) | Language model | Apache-2.0 | https://huggingface.co/unsloth |
-| llama.cpp v1.0.0 | Model server | MIT | https://github.com/ggml-org/llama.cpp |
-| Kokoro-82M v1.0 | Text to speech (af_heart default) | Apache-2.0 | https://huggingface.co/hexgrad/Kokoro-82M |
-| kokoro-onnx model export | ONNX build of Kokoro | MIT | https://github.com/thewh1teagle/kokoro-onnx |
-| whisper.cpp models (base.en, small.en) | Speech to text | MIT | https://huggingface.co/ggerganov/whisper.cpp |
+| nomic-embed-text v1.5 (Q8_0 GGUF) | Memory vault embeddings | Apache-2.0 | https://huggingface.co/nomic-ai/nomic-embed-text-v1.5-GGUF |
+| Kokoro-82M v1.0 weights | AIRA's voice | Apache-2.0 | https://huggingface.co/hexgrad/Kokoro-82M |
+| kokoro-onnx model export (kokoro-v1.0.onnx, voices-v1.0.bin) | ONNX build of Kokoro | MIT | https://github.com/thewh1teagle/kokoro-onnx |
+| whisper.cpp models (ggml-base.en, ggml-small.en) | Speech to text | MIT | https://huggingface.co/ggerganov/whisper.cpp |
 
-Each shipped voice gets its own row once phase 5 picks them (Kokoro presets, and the Piper fallback voice, whose licence is set per voice).
+### Shipped voices
+
+| Voice | Engine | Use | Licence |
+| --- | --- | --- | --- |
+| af_heart (default), af_bella, af_nicole, af_sarah, af_sky, af_nova, bf_emma, bf_isabella | Kokoro-82M | AIRA, switchable by voice | Apache-2.0 (Kokoro-82M voice packs) |
+| en_US-ljspeech-medium | Piper | Fallback under 6 GB of memory | Voice model trained on the LJ Speech dataset, public domain (model card: rhasspy/piper-voices) |
+
+Not shipped: en_US-amy (dataset licence only given as "See URL"). No voice is cloned from a real person.
+
+## Software
+
+| Component | Use | Licence | Source |
+| --- | --- | --- | --- |
+| llama.cpp v1.0.0 | Model server | MIT | https://github.com/ggml-org/llama.cpp |
+| whisper.cpp v1.9.5 | Speech recognition server | MIT | https://github.com/ggml-org/whisper.cpp |
+| Piper (piper-tts 1.8.0, piper1-gpl) | Fallback speech engine | GPL-3.0-or-later; run as a separate program, not imported by AIRA | https://github.com/OHF-voice/piper1-gpl |
+| sqlcipher3 0.6.5 (SQLCipher 4.20.0 community) | Encrypted vault | zlib (sqlcipher3), BSD-3-Clause (SQLCipher) | https://github.com/coleifer/sqlcipher3 |
+| sqlite-vec 0.1.9 | Vector search | MIT / Apache-2.0 | https://github.com/asg017/sqlite-vec |
+| kokoro-onnx 0.6.1 | Kokoro runtime | MIT | https://github.com/thewh1teagle/kokoro-onnx |
+| onnxruntime 1.32.0 | ONNX inference | MIT | https://github.com/microsoft/onnxruntime |
+| espeakng-loader / eSpeak NG | Phonemes for Kokoro | GPL-3.0 (eSpeak NG data and library, loaded at runtime) | https://github.com/espeak-ng/espeak-ng |
+| phonemizer 3.6.0 | Phonemes for Kokoro | GPL-3.0 | https://github.com/bootphon/phonemizer |
+
+Note for packaging (phase 8): eSpeak NG and phonemizer are GPL-3.0 and are imported in-process by
+kokoro-onnx. Before redistribution, decide AIRA's own licence with that in mind or isolate speech
+synthesis in a separate process as is done for Piper.

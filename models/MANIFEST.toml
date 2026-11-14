@@ -69,6 +69,26 @@ sha256_source = "tofu"  # recorded on first download 2026-11-14
 license = "Apache-2.0"
 
 [[model]]
+name = "piper-ljspeech"
+role = "tts-fallback"
+file = "en_US-ljspeech-medium.onnx"
+url = "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/ljspeech/medium/en_US-ljspeech-medium.onnx"
+size = 63531379
+sha256 = "6f52a751e2349abe7a76735eb09dc1875298c77ea2342ffd2fef79ff81b87f22"
+sha256_source = "upstream"
+license = "voice: public domain (LJ Speech dataset); Piper engine GPL-3.0, run as a separate program"
+
+[[model]]
+name = "piper-ljspeech-config"
+role = "tts-fallback"
+file = "en_US-ljspeech-medium.onnx.json"
+url = "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/ljspeech/medium/en_US-ljspeech-medium.onnx.json"
+size = 0  # small JSON, checked by hash
+sha256 = "141d612cc0a95ed7efc1ca936b845c2364967f2e9217c5dbfcf69fc4d6c65860"
+sha256_source = "tofu"  # recorded on first download 2026-11-14
+license = "public domain"
+
+[[model]]
 name = "whisper-base-en"
 role = "stt"
 file = "ggml-base.en.bin"
