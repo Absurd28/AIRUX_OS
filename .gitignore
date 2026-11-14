@@ -1,0 +1,20 @@
+# Weights and build output live in $AIRUX_WORK (/srv/airux-work), never in git
+*.gguf
+*.onnx
+*.bin
+*.part
+build/
+dist/
+*.iso
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+*.egg-info/
+
+# Runtime
+*.log
+*.db
+*.sqlite
