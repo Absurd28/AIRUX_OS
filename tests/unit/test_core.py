@@ -11,7 +11,9 @@ import pytest
 from aira.broker import Broker, deny_all
 from aira.config import Config
 from aira.tools import build_registry
-from aira.tools.assistant import Store, parse_ics
+from aira.memory.embed import HashEmbedder
+from aira.memory.vault import Vault
+from aira.tools.assistant import parse_ics
 from aira.tools.base import AGENTS, CONFIRM, MAX_TOOLS_PER_AGENT, Registry, Risk, Tool
 from aira.tools.timeparse import parse_when
 
@@ -33,8 +35,8 @@ def home(tmp_path, monkeypatch):
 def setup(home, tmp_path):
     cfg = Config(server_url="http://127.0.0.1:9", data_dir=tmp_path / "data")
     cfg.ensure_dirs()
-    store = Store(cfg.assistant_db, clock=lambda: NOW)
-    reg = build_registry(cfg, store)
+    vault = Vault(cfg.data_dir / "vault.db", "test-key", embedder=HashEmbedder(), clock=lambda: NOW)
+    reg = build_registry(cfg, vault)
     calls: list[str] = []
     for t in reg.tools.values():  # spy on every handler
         orig = t.handler
@@ -126,7 +128,7 @@ RISKY_CALLS = [
     ("desktop", "write_file", {"path": "~/old.log", "content": "x"}),
     ("desktop", "move_path", {"source": "~/notes/lab.md", "destination": "~/old.log"}),
     ("dev", "run_command", {"command": "echo hi"}),
-    ("dev", "container_control", {"name": "db", "action": "rm"}),
+    ("dev", "containers", {"name": "db", "action": "rm"}),
     ("dev", "python_env", {"action": "install", "path": "~/venv", "package": "numpy"}),
     ("research", "arxiv_search", {"query": "transformers"}),
     ("assistant", "forget", {"topic": "project x"}),
@@ -148,7 +150,7 @@ def test_every_tool_with_confirm_risk_is_covered(setup):
     _, reg, _ = setup
     covered = {t for _, t, _ in RISKY_CALLS}
     static_risky = {t.name for t in reg.tools.values() if not callable(t.risk) and t.risk & CONFIRM}
-    dynamic = {"write_file", "move_path", "run_command", "container_control", "python_env"}
+    dynamic = {"write_file", "move_path", "run_command", "containers", "python_env"}
     assert static_risky | dynamic <= covered
 
 
@@ -207,9 +209,12 @@ def test_assistant_reminders_and_forget(setup):
     _, r = b.execute("assistant", "add_reminder", {"text": "x", "when": "sometime soon"})
     assert not r.ok and "could not understand" in r.error
     b.execute("assistant", "remember", {"fact": "Project Falcon uses PyTorch 2.5"})
+    b.execute("assistant", "remember", {"fact": "I prefer dark mode"})
     assert b.execute("assistant", "recall", {"query": "falcon"})[1].data["count"] == 1
     assert b.execute("assistant", "forget", {"topic": "project falcon"})[1].data["items_removed"] == 1
     assert b.execute("assistant", "recall", {"query": "falcon"})[1].data["count"] == 0
+    everything = b.execute("assistant", "recall", {})[1].data
+    assert everything["profile_facts"] == ["I prefer dark mode"]
 
 
 def test_ics_parse():

@@ -101,6 +101,33 @@ def start(p: Plan, port: int, log_path: Path, health_timeout: float = 300) -> su
     raise TimeoutError(f"llama-server not healthy after {health_timeout:.0f}s; see {log_path}")
 
 
+EMBED_MODEL = "nomic-embed-text-v1.5.Q8_0.gguf"
+
+
+def start_embedder(port: int, log_path: Path, health_timeout: float = 120) -> subprocess.Popen:
+    """Small CPU-only llama-server for embeddings (memory vault vector search)."""
+    binary = WORK / "bin-cpu" / "llama-server"
+    if not binary.is_file():
+        binary = server_binary(False)
+    env = dict(os.environ, LD_LIBRARY_PATH=str(binary.parent), CUDA_VISIBLE_DEVICES="")
+    log = log_path.open("w")
+    proc = subprocess.Popen([str(binary), "--model", str(WORK / "models" / EMBED_MODEL), "--host", "127.0.0.1",
+                             "--port", str(port), "--embedding", "--n-gpu-layers", "0", "--ctx-size", "2048",
+                             "--threads", "2", "--cache-ram", "0"], env=env, stdout=log, stderr=subprocess.STDOUT)
+    deadline = time.monotonic() + health_timeout
+    while time.monotonic() < deadline:
+        if proc.poll() is not None:
+            raise RuntimeError(f"embedding server exited with code {proc.returncode}; see {log_path}")
+        try:
+            if _get(f"http://127.0.0.1:{port}/health").get("status") == "ok":
+                return proc
+        except (urllib.error.URLError, ConnectionError, TimeoutError, json.JSONDecodeError):
+            pass
+        time.sleep(0.5)
+    stop(proc)
+    raise TimeoutError(f"embedding server not healthy after {health_timeout:.0f}s; see {log_path}")
+
+
 def stop(proc: subprocess.Popen) -> None:
     if proc.poll() is None:
         proc.terminate()

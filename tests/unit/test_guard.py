@@ -10,7 +10,8 @@ from aira import guard
 from aira.config import Config
 from aira.llm import Completion
 from aira.orchestrator import Orchestrator
-from aira.tools.assistant import Store
+from aira.memory.embed import HashEmbedder
+from aira.memory.vault import Vault
 
 
 class FakeLLM:
@@ -46,8 +47,9 @@ def home(tmp_path, monkeypatch):
 def make(home: Path, tmp_path: Path, script, confirm=lambda *a: True):
     cfg = Config(server_url="http://fake", data_dir=tmp_path / "data")
     llm = FakeLLM(script)
-    store = Store(cfg.data_dir / "a.db", clock=lambda: dt.datetime(2026, 11, 14, 10, 0))
-    orch = Orchestrator(cfg, confirm, llm=llm, store=store)
+    vault = Vault(cfg.data_dir / "vault.db", "test-key", embedder=HashEmbedder(),
+                  clock=lambda: dt.datetime(2026, 11, 14, 10, 0))
+    orch = Orchestrator(cfg, confirm, llm=llm, vault=vault)
     executed = []
     for t in orch.registry.tools.values():
         orig = t.handler
@@ -208,6 +210,10 @@ def test_claims_done():
     assert not guard.claims_done("I couldn't delete it.")
     assert not guard.claims_done("The file was not deleted.")
     assert not guard.claims_done("I'm not sure. I stopped after 4 steps without finishing.")
+    assert not guard.claims_done("I don't see any events scheduled for tomorrow.")
+    assert not guard.claims_done("The reminder isn’t set yet.")
+    assert not guard.claims_done("Nothing was deleted.")
+    assert guard.claims_done("Your meeting is scheduled for 4pm.")
 
 
 @pytest.mark.parametrize("text,abstains", [
@@ -241,6 +247,33 @@ def test_blocked_call_not_reported_as_failed(home, tmp_path):
     assert turn.reply.startswith("I couldn't understand the time")
 
 
+def test_forget_is_not_recorded_as_episode(home, tmp_path):
+    script = [route("assistant", "remember"), call("remember", fact="Project Falcon uses PyTorch"),
+              reply("Remembered."),
+              route("assistant", "forget falcon"), call("forget", topic="project falcon"),
+              call("forget", topic="project falcon"), call("forget", topic="project falcon"),
+              reply("Forgot project Falcon.")]
+    orch, _, _ = make(home, tmp_path, script)
+    orch.handle("Remember that project Falcon uses PyTorch")
+    turn = orch.handle("Forget everything about project Falcon")
+    assert "Verified: nothing about it remains" in turn.reply
+    assert orch.vault.topic_present("project falcon") == {"keyword": [], "vector": []}
+    assert [e.text for e in orch.vault.by_kind("episode")] == ["Forgot a topic on request."]
+    # the action log keeps the audit record but not the forgotten content, and is only in the vault
+    assert orch.vault.keyword_search("falcon") == []
+    log = orch.action_log()
+    assert [a["tool"] for a in log] == ["remember", "forget"]
+    assert log[0]["args"] == {"fact": "[forgotten]"} and log[1]["args"] == {"topic": "[forgotten]"}
+    assert not orch.config.action_log.exists()
+
+
+def test_abbreviations_are_not_file_names():
+    ev = guard.Evidence()
+    ev.add({"x": 1})
+    assert set(guard.check_reply("Give a path, e.g. ~/notes, i.e. a folder, by 9 a.m. tomorrow.", ev)) == {
+        "path ~/notes is not in the tool results", "number 9 is not in the tool results"}
+
+
 def test_number_with_unit_is_not_a_file_name():
     ev = guard.Evidence()
     ev.add({"power_w": "32.67"})
@@ -255,11 +288,11 @@ def test_vague_time_is_asked_before_calling(home, tmp_path):
 
 
 def test_same_tool_failing_twice_stops(home, tmp_path):
-    script = [route("assistant", "dentist"), call("list_events", day="next week"),
-              call("list_events", day="this week"), call("list_events", day="soon")]
+    script = [route("assistant", "dentist"), call("agenda", day="next week"),
+              call("agenda", day="this week"), call("agenda", day="soon")]
     orch, llm, executed = make(home, tmp_path, script)
     turn = orch.handle("When is my dentist appointment?")
-    assert executed == ["list_events", "list_events"] and len(llm.script) == 1
+    assert executed == ["agenda", "agenda"] and len(llm.script) == 1
     assert turn.reply.startswith("I'm not sure") and "failed twice" in turn.reply
 
 

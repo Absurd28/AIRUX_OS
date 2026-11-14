@@ -104,6 +104,7 @@ PATH_RE = re.compile(r"(?:~|/)[\w.\-/~]*[\w]")
 FILE_RE = re.compile(r"\b[\w\-]+\.(?:[a-z0-9]{1,5})\b", re.I)
 QUOTED_RE = re.compile(r"`([^`]{2,80})`")
 UNIT_RE = re.compile(r"(-?\d+(?:\.\d+)?)\s*(GB|MB|TB)\b")
+ABBREVIATIONS = {"e.g", "i.e", "a.m", "p.m", "etc.", "vs."}
 
 
 @dataclass
@@ -184,6 +185,8 @@ def check_reply(reply: str, ev: Evidence) -> list[str]:
     for f in FILE_RE.findall(reply):
         if re.fullmatch(r"\d+\.\d+[A-Za-z%°]*", f):  # a decimal number (maybe with a unit), not a file name
             continue
+        if f.lower() in ABBREVIATIONS:
+            continue
         if f.lower() not in blob.lower():
             problems.append(f"name {f} is not in the tool results")
     for q in QUOTED_RE.findall(reply):
@@ -200,7 +203,8 @@ def check_reply(reply: str, ev: Evidence) -> list[str]:
 DONE_WORDS = re.compile(r"\b(done|deleted|removed|created|renamed|moved|installed|restarted|started|stopped|"
                         r"committed|saved|written|copied|set|scheduled|added|remembered|imported|forgot|"
                         r"forgotten|launched|opened)\b", re.I)
-NEGATION = re.compile(r"\b(not|n't|couldn't|cannot|can't|unable|failed|wasn't|won't|didn't|no|without)\b", re.I)
+# any "...n't" word (don't, isn't, couldn't, haven't, ...) or a plain negation word
+NEGATION = re.compile(r"(\w+n['’]t\b|\b(?:not|cannot|unable|failed|no|without|never|nothing)\b)", re.I)
 
 
 def claims_done(text: str) -> bool:

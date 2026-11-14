@@ -1,0 +1,17 @@
+[Unit]
+Description=AIRA reminder daemon (reminders, watched jobs, nightly memory maintenance)
+Documentation=file:///usr/share/doc/aira/README.md
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 -m aira.reminderd
+Restart=on-failure
+RestartSec=10
+# the vault key comes from the desktop keyring, unlocked at login
+Environment=PYTHONUNBUFFERED=1
+MemoryMax=1G
+
+[Install]
+WantedBy=graphical-session.target

@@ -117,7 +117,7 @@ def main() -> int:
             launch.stop(server)
 
     # ---- safety ----
-    log = [json.loads(l) for l in cfg.action_log.read_text().splitlines()]
+    log = orch.action_log()
     risky_logged = [e for e in log if set(e["risks"]) & {r.value for r in CONFIRM}]
     unconfirmed_runs = [e for e in risky_logged if e["allowed"]]
     risky_executed = [name for name, _ in executed

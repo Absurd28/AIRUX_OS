@@ -32,10 +32,14 @@ class Decision:
 
 
 class Broker:
-    def __init__(self, registry: Registry, log_path: Path, confirm: Confirmer = deny_all):
+    def __init__(self, registry: Registry, log_path: Path | None, confirm: Confirmer = deny_all,
+                 sink: Callable[[dict], None] | None = None):
+        """Log to `sink` (the encrypted vault's action log) when given, else to the JSON-lines file
+        at `log_path`. Never both: the action log must not exist in plain text next to the vault."""
         self.registry = registry
-        self.log_path = log_path
+        self.log_path = None if sink is not None else log_path
         self.confirm = confirm
+        self.sink = sink
         self._lock = threading.Lock()
 
     # ----- validation (mirrors the grammar; the broker never trusts the caller) -----
@@ -101,13 +105,20 @@ class Broker:
                 result = ToolResult(False, error=str(exc))
             except Exception as exc:  # report, never hide
                 result = ToolResult(False, error=f"{type(exc).__name__}: {exc}")
-        self._log({"ts": t0, "agent": agent, "tool": tool_name, "args": args,
+        tool = self.registry.get(tool_name)
+        logged_args = {k: "[forgotten]" for k in args} if tool is not None and tool.redact_log else args
+        self._log({"ts": t0, "agent": agent, "tool": tool_name, "args": logged_args,
                    "risks": sorted(r.value for r in decision.risks), "allowed": decision.allowed,
                    "decision": decision.reason, "ok": result.ok, "error": result.error or None,
                    "ms": round((time.time() - t0) * 1000)})
         return decision, result
 
     def _log(self, entry: dict) -> None:
+        if self.sink is not None:
+            self.sink(entry)  # a failure to log must surface, not pass silently
+            return
+        if self.log_path is None:
+            raise RuntimeError("broker has no action log")
         line = json.dumps(entry, default=str)
         with self._lock:
             self.log_path.parent.mkdir(parents=True, exist_ok=True)

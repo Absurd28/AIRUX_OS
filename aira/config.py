@@ -23,5 +23,9 @@ class Config:
     def assistant_db(self) -> Path:
         return self.data_dir / "assistant.db"
 
+    @property
+    def vault_path(self) -> Path:
+        return self.data_dir / "vault.db"
+
     def ensure_dirs(self) -> None:
         self.data_dir.mkdir(parents=True, exist_ok=True)

@@ -64,6 +64,8 @@ class Tool:
     readback: Callable[[dict, Any], tuple[bool, str]] | None = None
     # whether a successful call changes state (and so may only be reported "done" after read-back)
     changes_state: bool | Callable[[dict], bool] = False
+    # log this call's arguments as "[forgotten]" (e.g. forget: the topic must not be kept)
+    redact_log: bool = False
 
     def mutates(self, args: dict) -> bool:
         return self.changes_state(args) if callable(self.changes_state) else self.changes_state

@@ -1,0 +1,11 @@
+[Unit]
+Description=AIRA login briefing (today's events, due reminders, finished or failed watched jobs)
+After=graphical-session.target aira-reminderd.service
+PartOf=graphical-session.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 -m aira.reminderd --briefing
+
+[Install]
+WantedBy=graphical-session.target

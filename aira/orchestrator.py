@@ -10,8 +10,10 @@ from .agents import PERSONA, ROLES, AgentRun, SubAgent
 from .broker import Broker, Confirmer
 from .config import Config
 from .llm import LLM, LLMError
+from .memory.embed import Embedder
+from .memory.keys import get_key
+from .memory.vault import Vault
 from .tools import build_registry
-from .tools.assistant import Store
 from .tools.base import AGENTS, Registry
 
 ROUTER_RULES = """You are AIRA's orchestrator. Split the user's command into tasks for these agents:
@@ -46,12 +48,18 @@ class Turn:
 
 class Orchestrator:
     def __init__(self, config: Config, confirm: Confirmer, registry: Registry | None = None,
-                 llm: LLM | None = None, store: Store | None = None):
+                 llm: LLM | None = None, vault: Vault | None = None):
         config.ensure_dirs()
         self.config = config
         self.llm = llm or LLM(config.server_url, config.request_timeout)
-        self.registry = registry or build_registry(config, store)
-        self.broker = Broker(self.registry, config.action_log, confirm)
+        key_source = ""
+        if vault is None:
+            key, key_source = get_key()
+            vault = Vault(config.vault_path, key, embedder=Embedder())
+        self.vault = vault
+        self.registry = registry or build_registry(config, vault, key_source)
+        self.broker = Broker(self.registry, None, confirm,
+                             sink=lambda e: vault.add("action", json.dumps(e, default=str), embed=False))
         try:
             slots = self.llm.total_slots()
         except LLMError:
@@ -77,6 +85,10 @@ class Orchestrator:
              "additionalProperties": False},
         ]}
 
+    def action_log(self) -> list[dict]:
+        """The action log entries from the vault, oldest first."""
+        return [json.loads(it.text) for it in self.vault.by_kind("action", order="id")]
+
     def route(self, command: str) -> dict:
         now = dt.datetime.now()
         msgs = [{"role": "system", "content": self.router_prompt},
@@ -84,6 +96,20 @@ class Orchestrator:
         return self.llm.chat(msgs, self.router_schema, slot=0, max_tokens=300).data or {}
 
     def handle(self, command: str) -> Turn:
+        turn = self._handle(command)
+        # episode memory (skipped while memory is paused)
+        if not self.vault.paused and turn.kind != "error":
+            first = turn.reply.strip().split("\n", 1)[0]
+            forgot = any(s.tool == "forget" for r in turn.runs for s in r.tool_calls)
+            # a "forget X" request must not put X straight back into memory
+            text = "Forgot a topic on request." if forgot else f"{command} -> {first}"
+            try:
+                self.vault.add("episode", text)
+            except Exception:
+                pass
+        return turn
+
+    def _handle(self, command: str) -> Turn:
         turn = Turn(command)
         try:
             r = self.route(command)

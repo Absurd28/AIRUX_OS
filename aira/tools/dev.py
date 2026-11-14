@@ -112,6 +112,14 @@ def container_list(all_containers: bool = True) -> dict:
                             "state": c.get("State"), "status": c.get("Status")} for c in data]}
 
 
+def containers(action: str = "list", name: str = "") -> dict:
+    if action == "list":
+        return container_list()
+    if not name:
+        raise ToolError(f"say which container to {action}")
+    return container_control(name, action)
+
+
 def container_control(name: str, action: str) -> dict:
     if not set(name) <= NAME_RE_CHARS:
         raise ToolError(f"invalid container name: {name!r}")
@@ -202,7 +210,48 @@ def _env_readback(a: dict, result) -> tuple[bool, str]:
     return True, "read only"
 
 
-def register(reg: Registry) -> None:
+UNIT_RE = re.compile(r"^[A-Za-z0-9@._:\-]+$")
+
+
+def _proc_exists(pid: int) -> bool:
+    return Path(f"/proc/{pid}").exists()
+
+
+def _unit_exists(unit: str) -> bool:
+    if not UNIT_RE.match(unit):
+        return False
+    r = subprocess.run(["systemctl", "--user", "show", unit, "-p", "LoadState", "--value"],
+                       capture_output=True, text=True, timeout=10)
+    return r.stdout.strip() not in ("", "not-found")
+
+
+def make_watch_job(vault):
+    def watch_job(label: str, pid: int = 0, unit: str = "") -> dict:
+        if not pid and not unit:
+            raise ToolError("give the process id or the systemd unit of the job to watch")
+        now = vault.clock().isoformat(timespec="seconds")
+        with vault._lock:
+            cur = vault.db.execute("INSERT INTO jobs(label, pid, unit, started) VALUES (?,?,?,?)",
+                                   (label, pid or None, unit or None, now))
+            vault.db.commit()
+        return {"id": cur.lastrowid, "label": label, "pid": pid or None, "unit": unit or None}
+
+    def entities(a: dict) -> list:
+        out = []
+        if a.get("pid"):
+            out.append(("process", str(a["pid"]), _proc_exists(int(a["pid"]))))
+        if a.get("unit"):
+            out.append(("systemd unit", a["unit"], _unit_exists(a["unit"])))
+        return out
+
+    def readback(a: dict, result) -> tuple[bool, str]:
+        r = vault.db.execute("SELECT id FROM jobs WHERE id=? AND finished IS NULL", (result["id"],)).fetchone()
+        return bool(r), f"job {result['id']} is being watched" if r else "watch not stored"
+
+    return watch_job, entities, readback
+
+
+def register(reg: Registry, vault=None) -> None:
     A = "dev"
     reg.add(Tool("git_status", A, "branch and uncommitted changes of a git repository",
                  {"repo": S("repository folder")}, ["repo"], git_status, entities=_repo_entities))
@@ -220,14 +269,21 @@ def register(reg: Registry) -> None:
                  {"command": S("shell command"), "cwd": S("working folder")}, ["command"], run_command,
                  _command_risk, entities=lambda a: [exists_dir(a["cwd"])] if a.get("cwd") else [],
                  changes_state=True))  # effect cannot be read back in general: never reported "done"
-    reg.add(Tool("container_list", A, "list Podman containers and their state",
-                 {"all_containers": {"type": "boolean"}}, [], container_list))
-    reg.add(Tool("container_control", A, "start, stop, restart or remove a Podman container",
-                 {"name": S("container name"), "action": S("what to do", enum=["start", "stop", "restart", "rm"])},
-                 ["name", "action"], container_control,
-                 lambda a: {Risk.DELETE} if a.get("action") in ("stop", "rm") else {Risk.WRITE},
-                 entities=lambda a: [("container", a["name"], _container_exists(a["name"]))],
-                 readback=_container_readback, changes_state=True))
+    reg.add(Tool("containers", A, "list Podman containers, or start, stop, restart or remove one",
+                 {"action": S("what to do", enum=["list", "start", "stop", "restart", "rm"]),
+                  "name": S("container name (not needed for list)")}, ["action"], containers,
+                 lambda a: {Risk.DELETE} if a.get("action") in ("stop", "rm")
+                 else ({Risk.READ} if a.get("action") == "list" else {Risk.WRITE}),
+                 entities=lambda a: [] if a.get("action") == "list"
+                 else [("container", a.get("name", ""), _container_exists(a.get("name", "")))],
+                 readback=lambda a, r: (True, "read only") if a.get("action") == "list" else _container_readback(a, r),
+                 changes_state=lambda a: a.get("action") != "list"))
+    if vault is not None:
+        fn, ent, rb = make_watch_job(vault)
+        reg.add(Tool("watch_job", A, "watch a running job (process id or systemd unit) and tell the user when "
+                     "it finishes or fails", {"label": S("short name for the job"), "pid": I("process id", 1),
+                                              "unit": S("systemd user unit")}, ["label"], fn,
+                     frozenset({Risk.WRITE}), entities=ent, readback=rb, changes_state=True))
     reg.add(Tool("python_env", A, "create a Python virtual environment, list or install its packages",
                  {"action": S("what to do", enum=["create", "list", "install"]), "path": S("environment folder"),
                   "package": S("package to install, e.g. numpy==2.1.0")}, ["action", "path"], python_env,
