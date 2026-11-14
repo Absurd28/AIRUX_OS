@@ -1,0 +1,22 @@
+#!/bin/sh
+# AIRUX 0.1 live image: Debian 13 (trixie), Xfce, Calamares, AIRA.
+# Areas: main + non-free-firmware (real firmware for Wi-Fi, GPUs, CPUs). Not contrib: its firmware
+# *installer* packages (e.g. firmware-b43-installer) download blobs from third-party sites at build
+# time. The NVIDIA driver (non-free) is enabled after install (phase 9); the ISO is CPU-only.
+set -e
+lb config noauto \
+    --distribution trixie \
+    --archive-areas "main non-free-firmware" \
+    --debian-installer none \
+    --binary-images iso-hybrid \
+    --bootloaders "grub-efi,syslinux" \
+    --memtest none \
+    --apt-recommends false \
+    --security true \
+    --updates true \
+    --image-name airux-0.1 \
+    --iso-application "AIRUX 0.1" \
+    --iso-publisher "AIRUX" \
+    --iso-volume "AIRUX 0.1" \
+    --bootappend-live "boot=live components quiet splash hostname=airux username=airux user-fullname=AIRUX user-default-groups=audio,cdrom,dip,floppy,video,plugdev,netdev,bluetooth,sudo,aira locales=en_US.UTF-8" \
+    "${@}"

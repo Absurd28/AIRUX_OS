@@ -1,0 +1,42 @@
+#!/bin/sh
+# AIRUX branding and defaults inside the image.
+set -e
+
+# os-release: AIRUX, based on Debian 13 (diverted, so base-files upgrades keep it)
+dpkg-divert --quiet --local --rename --add /usr/lib/os-release
+cat > /usr/lib/os-release <<'OSR'
+PRETTY_NAME="AIRUX 0.1 (based on Debian 13)"
+NAME="AIRUX"
+VERSION_ID="0.1"
+VERSION="0.1 (with AIRA, the Adaptive Intelligent Research Assistant)"
+VERSION_CODENAME=trixie
+ID=airux
+ID_LIKE=debian
+HOME_URL="file:///usr/share/doc/aira/README.md"
+OSR
+ln -sf ../usr/lib/os-release /etc/os-release
+echo "AIRUX 0.1 \n \l" > /etc/issue
+echo "airux" > /etc/hostname
+
+# wallpaper and login screen
+update-alternatives --install /usr/share/images/desktop-base/desktop-background desktop-background \
+    /usr/share/backgrounds/airux/airux-wallpaper.png 100
+update-alternatives --set desktop-background /usr/share/backgrounds/airux/airux-wallpaper.png
+
+# boot splash
+plymouth-set-default-theme airux
+update-initramfs -u -k all
+
+# AIRA's group exists before any user is created (the aira package also creates it)
+getent group aira >/dev/null || addgroup --system aira
+
+# installer: AIRUX branding, and an "Install AIRUX" launcher on the live desktop
+sed -i 's/^branding:.*/branding: airux/' /etc/calamares/settings.conf
+f=/usr/share/applications/calamares-install-debian.desktop
+if [ -f "$f" ]; then
+    sed -i -e 's/^Name=.*/Name=Install AIRUX/' -e '/^Name\[/d' -e 's/^Icon=.*/Icon=aira/'         -e '/^GenericName/d' -e '/^Comment/d' "$f"
+    echo "Comment=Install AIRUX with AIRA on this computer" >> "$f"
+    # on the live desktop (the live user's home is made from /etc/skel)
+    install -D -m 755 "$f" /etc/skel/Desktop/install-airux.desktop
+fi
+exit 0

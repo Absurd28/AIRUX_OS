@@ -43,7 +43,11 @@ def main(argv: list[str] | None = None) -> int:
     kiosk = None
     if not args.no_kiosk:
         exe = shutil.which("chromium") or "/usr/bin/chromium"
-        kiosk = subprocess.Popen([exe, "--kiosk", f"--app={url}", "--no-first-run", "--noerrdialogs",
+        # full screen on an installed system; a normal window in the live session, so the desktop
+        # and its "Install AIRUX" launcher stay reachable
+        mode = [] if Path("/run/live/medium").exists() else ["--kiosk"]
+        kiosk = subprocess.Popen([exe, *mode, f"--app={url}", "--no-first-run", "--noerrdialogs",
+                                  "--password-store=basic",   # never ask the user to unlock a keyring
                                   f"--user-data-dir={cfg.data_dir / 'shell-profile'}"],
                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     stop = []

@@ -1,0 +1,10 @@
+# Put on the medium's package pool (not installed in the live system): Calamares installs the boot
+# loader into the new system from here, offline (calamares-sources-media + bootloader-config).
+# UEFI only for 0.1: grub-pc (BIOS) conflicts with grub-efi-amd64 in one pool. The ISO still boots
+# on BIOS machines, but installs need UEFI (see KNOWN_ISSUES.md).
+grub-efi
+grub-efi-amd64
+grub-efi-amd64-signed
+shim-signed
+cryptsetup-initramfs
+keyutils

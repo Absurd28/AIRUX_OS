@@ -49,10 +49,23 @@ def load_names() -> list[str]:
     if p.is_file():
         try:
             data = tomllib.loads(p.read_text())
-            return [str(n).strip() for n in data.get("names", []) if str(n).strip()]
+            names = [str(n).strip() for n in data.get("names", []) if str(n).strip()]
+            if names:
+                return names
         except (OSError, tomllib.TOMLDecodeError):
-            return []
-    return []
+            pass
+    return gecos_first_name()
+
+
+def gecos_first_name() -> list[str]:
+    """The first name from the account's full name (what the installer asked for), if any."""
+    try:
+        import pwd
+        full = pwd.getpwuid(os.getuid()).pw_gecos.split(",")[0].strip()
+    except (KeyError, ImportError):
+        return []
+    first = full.split()[0] if full else ""
+    return [first] if first and first.isalpha() else []
 
 
 class Persona:

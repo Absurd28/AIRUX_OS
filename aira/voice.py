@@ -117,6 +117,15 @@ class VoiceTurn:
     speak_seconds: float = 0.0
 
 
+def turn_report(vt: VoiceTurn) -> str:
+    """What the CLI prints for one turn; a reply that could not be played is said so plainly."""
+    out = f"you: {vt.transcript}\nAIRA: {vt.turn.reply if vt.turn else vt.spoken}"
+    err = vt.speech.get("error") if vt.speech else None
+    if vt.speech and not vt.speech.get("spoken", True) and err != "playback disabled":
+        out += f"\n(not spoken aloud: {err or 'audio playback failed'})"
+    return out
+
+
 class VoiceSession:
     def __init__(self, orchestrator, transcriber: Transcriber, speaker: Speaker):
         self.orch = orchestrator
@@ -164,7 +173,7 @@ def main(argv: list[str] | None = None) -> int:
     session = VoiceSession(orch, Transcriber(), speaker)
     if args.file:
         vt = session.handle_audio(args.file)
-        print(f"you: {vt.transcript}\nAIRA: {vt.turn.reply if vt.turn else vt.spoken}")
+        print(turn_report(vt), flush=True)
         return 0
     rec = Recorder(cfg.data_dir / "recordings")
     print("AIRA voice. Press Enter to talk, Enter again to stop. Ctrl-C to quit.")
@@ -178,7 +187,7 @@ def main(argv: list[str] | None = None) -> int:
         except (EOFError, KeyboardInterrupt):
             return 0
         vt = session.handle_audio(wav)
-        print(f"you: {vt.transcript}\nAIRA: {vt.turn.reply if vt.turn else vt.spoken}", flush=True)
+        print(turn_report(vt), flush=True)
 
 
 if __name__ == "__main__":

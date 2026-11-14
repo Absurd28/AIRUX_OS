@@ -1,0 +1,22 @@
+[Unit]
+Description=AIRA language model server (llama-server; model tier and slots chosen for this machine)
+Documentation=file:///usr/share/doc/aira/README.md
+After=network.target aira-firstboot.service
+Wants=aira-firstboot.service
+
+[Service]
+Type=exec
+User=aira
+Group=aira
+SupplementaryGroups=video render
+Environment=AIRUX_WORK=/opt/aira PYTHONPATH=/opt/aira/app
+ExecStart=/opt/aira/venv/bin/python -m aira.profiler --exec --port 8080
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

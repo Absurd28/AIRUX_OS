@@ -1,0 +1,10 @@
+// Full-screen splash scaled to the screen, with a small pulsing dot under the title.
+bg = Image("splash.png");
+sw = Window.GetWidth(); sh = Window.GetHeight();
+scaled = bg.Scale(sw, sh);
+s = Sprite(scaled); s.SetPosition(0, 0, -10);
+dot = Image("dot.png"); d = Sprite(dot);
+d.SetPosition(sw / 2 - dot.GetWidth() / 2, sh * 0.62, 10);
+t = 0;
+fun refresh() { t++; d.SetOpacity(0.35 + 0.65 * Math.Abs(Math.Sin(t / 18))); }
+Plymouth.SetRefreshFunction(refresh);

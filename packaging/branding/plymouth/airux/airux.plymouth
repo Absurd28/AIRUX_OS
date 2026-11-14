@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=AIRUX
+Description=AIRUX boot splash (AIRA, the Adaptive Intelligent Research Assistant)
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/airux
+ScriptFile=/usr/share/plymouth/themes/airux/airux.script

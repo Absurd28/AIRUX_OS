@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import tempfile
 from pathlib import Path
@@ -28,11 +29,37 @@ def main(argv: list[str] | None = None) -> int:
                     help="step down a tier if generation is slower than this")
     ap.add_argument("--max-slots", type=int, default=None, help="cap the slot count")
     ap.add_argument("--out", type=Path, default=None)
+    ap.add_argument("--exec", action="store_true", help="become llama-server with this machine's plan (systemd)")
+    ap.add_argument("--recommend", type=Path, default=None, help="write the first-boot tier recommendation")
     args = ap.parse_args(argv)
 
     hw = probe()
     p = plan(hw, args.models, args.ctx_per_slot, max_slots=args.max_slots)
     profile: dict = {"hardware": hw.to_dict(), "plan": p.to_dict()}
+
+    if args.exec:
+        # systemd (aira-llm.service): become llama-server with this machine's plan
+        cmd = launch.server_command(p, args.port)
+        print(f"aira-llm: {p.tier}, {p.slots} slots, gpu={p.use_gpu}: {' '.join(cmd)}", flush=True)
+        os.execve(cmd[0], cmd, launch.server_env(p))
+
+    if args.recommend:
+        # first boot: what the hardware deserves vs. what is installed (the bigger model is offered,
+        # never downloaded without the user's yes)
+        import tomllib
+
+        from .plan import REPO, tier_for
+        by_rule = tier_for(hw)
+        manifest = tomllib.loads((REPO / "models" / "MANIFEST.toml").read_text())["model"]
+        entry = next((e for e in manifest if e.get("tier") == by_rule), None)
+        rec = {"tier_by_hardware": by_rule, "tier_installed": p.tier,
+               "download_needed": by_rule != p.tier and entry is not None,
+               "download": {"name": entry["name"], "size_gb": round(entry["size"] / 1e9, 1)} if entry else None,
+               "hardware": profile["hardware"]}
+        args.recommend.parent.mkdir(parents=True, exist_ok=True)
+        args.recommend.write_text(json.dumps(rec, indent=2, default=str))
+        print(json.dumps(rec, indent=2, default=str))
+        return 0
 
     if args.launch:
         catalogue = load_catalogue(args.models)

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <defs>
+    <radialGradient id="g" cx="0.72" cy="0.28" r="0.95">
+      <stop offset="0" stop-color="#1b2735"/><stop offset="0.55" stop-color="#11161d"/><stop offset="1" stop-color="#0a0d11"/>
+    </radialGradient>
+    <linearGradient id="wave" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7cc4ff" stop-opacity="0.9"/><stop offset="1" stop-color="#59c38a" stop-opacity="0.9"/>
+    </linearGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#g)"/>
+  <path d="M0 760 C 240 760, 300 640, 520 640 S 820 880, 980 880 S 1260 560, 1440 560 S 1700 760, 1920 760"
+        fill="none" stroke="url(#wave)" stroke-width="3" opacity="0.55"/>
+  <path d="M0 800 C 260 800, 330 700, 540 700 S 840 900, 1000 900 S 1280 620, 1460 620 S 1720 800, 1920 800"
+        fill="none" stroke="url(#wave)" stroke-width="2" opacity="0.25"/>
+  <text x="140" y="470" font-family="DejaVu Sans, sans-serif" font-size="150" font-weight="700" fill="#e6e9ee"
+        letter-spacing="12">AIRUX</text>
+  <text x="146" y="540" font-family="DejaVu Sans, sans-serif" font-size="34" fill="#8b95a3">
+    with AIRA, the Adaptive Intelligent Research Assistant</text>
+</svg>

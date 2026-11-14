@@ -6,7 +6,7 @@ PartOf=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3 -m aira.reminderd
+ExecStart=/usr/bin/aira-reminderd
 Restart=on-failure
 RestartSec=10
 # the vault key comes from the desktop keyring, unlocked at login

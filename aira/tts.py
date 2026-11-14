@@ -1,20 +1,23 @@
 """AIRA's voice: Kokoro-82M (ONNX), voice af_heart by default, played with paplay.
 
-The model loads once (about 1.5 s) and synthesis runs on the CPU. Each utterance is also written
-as a WAV under the data folder so it can be checked. Phase 5 adds the Piper fallback for machines
-with under 6 GB of memory and voice switching.
+Synthesis runs in a separate process (aira.tts_worker), started once and kept alive: Kokoro's
+phonemes come from GPL-3.0 libraries (eSpeak NG, phonemizer), which therefore never load into
+AIRA's own process. Each utterance is written as a WAV under the data folder so it can be checked.
+The Piper fallback (under 6 GB of memory) is likewise a separate program.
 """
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
+import sys
 import threading
 import time
 import wave
 from pathlib import Path
 
-MODELS = Path(os.environ.get("AIRUX_WORK", "/srv/airux-work")) / "models"
+MODELS = Path(os.environ.get("AIRA_MODELS", Path(os.environ.get("AIRUX_WORK", "/srv/airux-work")) / "models"))
 DEFAULT_VOICE = "af_heart"
 # female Kokoro presets AIRA may switch to by voice ("change your voice to Bella")
 FEMALE_VOICES = {"heart": "af_heart", "bella": "af_bella", "nicole": "af_nicole", "sarah": "af_sarah",
@@ -28,30 +31,46 @@ class Speaker:
         self.voice = voice
         self.out_dir = out_dir
         self.play = play
-        self._kokoro = None
+        self._worker: subprocess.Popen | None = None
+        self._voices: list[str] = []
         self._lock = threading.Lock()
+        self._wlock = threading.Lock()
 
-    def _engine(self):
-        if self._kokoro is None:
-            from kokoro_onnx import Kokoro
-            self._kokoro = Kokoro(str(MODELS / "kokoro-v1.0.onnx"), str(MODELS / "voices-v1.0.bin"))
-        return self._kokoro
+    def _engine(self) -> subprocess.Popen:
+        """The speech worker process (started on first use, restarted if it died)."""
+        with self._wlock:
+            if self._worker is None or self._worker.poll() is not None:
+                self._worker = subprocess.Popen([sys.executable, "-m", "aira.tts_worker"], stdin=subprocess.PIPE,
+                                                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+                                                env=dict(os.environ, AIRA_MODELS=str(MODELS)), bufsize=1)
+                ready = json.loads(self._worker.stdout.readline() or '{"ok": false}')
+                if not ready.get("ok"):
+                    raise RuntimeError("the speech worker did not start")
+                self._voices = ready.get("voices", [])
+            return self._worker
 
     def voices(self) -> list[str]:
-        return list(self._engine().get_voices())
+        self._engine()
+        return list(self._voices)
 
     def synth(self, text: str, path: Path) -> float:
         """Write speech for `text` to a WAV file; returns its duration in seconds."""
-        import numpy as np
-        samples, sr = self._engine().create(text, voice=self.voice, speed=1.0, lang="en-us")
-        pcm = (np.clip(samples, -1, 1) * 32767).astype("<i2")
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with wave.open(str(path), "wb") as w:
-            w.setnchannels(1)
-            w.setsampwidth(2)
-            w.setframerate(sr)
-            w.writeframes(pcm.tobytes())
-        return len(samples) / sr
+        w = self._engine()
+        with self._wlock:
+            w.stdin.write(json.dumps({"text": text, "voice": self.voice, "path": str(path)}) + "\n")
+            w.stdin.flush()
+            reply = json.loads(w.stdout.readline() or '{"ok": false, "error": "speech worker stopped"}')
+        if not reply.get("ok"):
+            raise RuntimeError(reply.get("error", "speech synthesis failed"))
+        return float(reply["seconds"])
+
+    def close(self) -> None:
+        if self._worker is not None and self._worker.poll() is None:
+            self._worker.stdin.close()
+            try:
+                self._worker.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self._worker.kill()
 
     def say(self, text: str) -> dict:
         """Speak text. Returns what happened, never raises (a reminder must not die on audio)."""

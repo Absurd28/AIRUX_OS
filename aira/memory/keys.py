@@ -16,8 +16,24 @@ from pathlib import Path
 ATTRS = ["service", "aira", "item", "vault-key"]
 
 
+def keyring_unlocked() -> bool:
+    """True only if the default Secret Service collection exists and is already unlocked.
+    Using a locked or missing keyring would pop up a password dialog (e.g. with automatic login,
+    or in the live session), so AIRA then uses its key file instead."""
+    if not shutil.which("gdbus") or not os.environ.get("DBUS_SESSION_BUS_ADDRESS"):
+        return False
+    try:
+        r = subprocess.run(["gdbus", "call", "--session", "--timeout", "3", "--dest", "org.freedesktop.secrets",
+                            "--object-path", "/org/freedesktop/secrets/aliases/default", "--method",
+                            "org.freedesktop.DBus.Properties.Get", "org.freedesktop.Secret.Collection", "Locked"],
+                           capture_output=True, text=True, timeout=5)
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return r.returncode == 0 and "false" in r.stdout
+
+
 def _keyring_get() -> str | None:
-    if not shutil.which("secret-tool"):
+    if not shutil.which("secret-tool") or not keyring_unlocked():
         return None
     try:
         r = subprocess.run(["secret-tool", "lookup", *ATTRS], capture_output=True, text=True, timeout=10)
@@ -29,7 +45,7 @@ def _keyring_get() -> str | None:
 
 
 def _keyring_set(key: str) -> bool:
-    if not shutil.which("secret-tool"):
+    if not shutil.which("secret-tool") or not keyring_unlocked():
         return False
     try:
         r = subprocess.run(["secret-tool", "store", "--label=AIRA memory vault", *ATTRS],

@@ -1,0 +1,15 @@
+#!/bin/sh
+# First login: put the AIRUX wallpaper on every connected monitor. Xfce 4.20 keys wallpapers by the
+# monitor's real name (Virtual-1, eDP-1, HDMI-1, ...), so a single default cannot cover them all.
+# Runs once per user and never overrides a wallpaper the user chose.
+flag="${XDG_CONFIG_HOME:-$HOME/.config}/airux/wallpaper-set"
+[ -e "$flag" ] && exit 0
+img=/usr/share/images/desktop-base/default
+for mon in $(xrandr --query 2>/dev/null | awk '/ connected/ {print $1}'); do
+    for ws in 0 1 2 3; do
+        p="/backdrop/screen0/monitor$mon/workspace$ws/last-image"
+        xfconf-query -c xfce4-desktop -p "$p" >/dev/null 2>&1 || \
+            xfconf-query -c xfce4-desktop -p "$p" -n -t string -s "$img"
+    done
+done
+mkdir -p "$(dirname "$flag")" && touch "$flag"

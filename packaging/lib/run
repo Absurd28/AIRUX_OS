@@ -1,0 +1,7 @@
+#!/bin/sh
+# Runs an AIRA module from the installed app and its pinned virtual environment.
+export AIRUX_WORK=/opt/aira
+export AIRA_MODELS=/opt/aira/models
+export PYTHONPATH=/opt/aira/app${PYTHONPATH:+:$PYTHONPATH}
+export PLAYWRIGHT_BROWSERS_PATH=0
+exec /opt/aira/venv/bin/python -m "$@"

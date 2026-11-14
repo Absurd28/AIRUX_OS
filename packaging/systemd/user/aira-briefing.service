@@ -5,7 +5,7 @@ PartOf=graphical-session.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/python3 -m aira.reminderd --briefing
+ExecStart=/usr/bin/aira-reminderd --briefing
 
 [Install]
 WantedBy=graphical-session.target

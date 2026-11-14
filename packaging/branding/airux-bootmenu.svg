@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <rect width="800" height="600" fill="#0d1117"/>
+  <text x="400" y="200" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-size="64" font-weight="700"
+        fill="#e6e9ee" letter-spacing="6">AIRUX</text>
+  <text x="400" y="240" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-size="17" fill="#8b95a3">
+    with AIRA, the Adaptive Intelligent Research Assistant</text>
+</svg>

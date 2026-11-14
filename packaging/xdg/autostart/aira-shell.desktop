@@ -2,7 +2,7 @@
 Type=Application
 Name=AIRA
 Comment=AIRA, the Adaptive Intelligent Research Assistant (full-screen shell)
-Exec=python3 -m aira.shell
+Exec=aira-shell
 Icon=aira
 Terminal=false
 OnlyShowIn=XFCE;

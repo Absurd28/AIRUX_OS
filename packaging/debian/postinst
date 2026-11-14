@@ -1,0 +1,19 @@
+#!/bin/sh
+set -e
+if [ "$1" = configure ]; then
+    getent group aira >/dev/null || addgroup --system aira
+    getent passwd aira >/dev/null || adduser --system --ingroup aira --home /var/lib/aira --no-create-home \
+        --gecos "AIRA model services" aira
+    install -d -o aira -g aira -m 0755 /var/lib/aira
+    # people (uid 1000-59999) join the aira group so AIRA's polkit rule applies to their sessions
+    for u in $(awk -F: '$3>=1000 && $3<60000 {print $1}' /etc/passwd); do
+        adduser "$u" aira >/dev/null 2>&1 || true
+    done
+    if [ -d /run/systemd/system ]; then systemctl daemon-reload || true; fi
+    systemctl enable aira-firstboot.service aira-llm.service aira-embed.service aira-stt.service >/dev/null 2>&1 || true
+    systemctl --global enable aira-reminderd.service aira-briefing.service >/dev/null 2>&1 || true
+    if [ -d /run/systemd/system ]; then
+        systemctl start aira-firstboot.service aira-llm.service aira-embed.service aira-stt.service || true
+    fi
+fi
+exit 0

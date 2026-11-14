@@ -1,0 +1,20 @@
+// AIRUX: AIRA's root actions.
+// AIRA's permission broker asks the user before every one of these (enforced in code), so polkit
+// does not ask for a password again -- but only for members of the "aira" group, only in an
+// active local session, and only for starting/stopping/restarting units and installing packages.
+// Known 0.1 limit: any program the user runs could use the same permission.
+polkit.addRule(function (action, subject) {
+    if (!subject.local || !subject.active || !subject.isInGroup("aira")) {
+        return polkit.Result.NOT_HANDLED;
+    }
+    if (action.id == "org.freedesktop.systemd1.manage-units") {
+        var verb = action.lookup("verb");
+        if (verb == "start" || verb == "stop" || verb == "restart") {
+            return polkit.Result.YES;
+        }
+    }
+    if (action.id == "org.freedesktop.packagekit.package-install") {
+        return polkit.Result.YES;
+    }
+    return polkit.Result.NOT_HANDLED;
+});

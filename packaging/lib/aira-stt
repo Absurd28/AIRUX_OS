@@ -1,0 +1,7 @@
+#!/bin/sh
+# Speech recognition server: small.en when installed (better), else base.en (in the ISO).
+M=/opt/aira/models
+model=$M/ggml-base.en.bin
+[ -f "$M/ggml-small.en.bin" ] && model=$M/ggml-small.en.bin
+export LD_LIBRARY_PATH=/opt/aira/bin-whisper
+exec /opt/aira/bin-whisper/whisper-server -m "$model" --host 127.0.0.1 --port 8082 -t "$(nproc --ignore=2 2>/dev/null || echo 2)"

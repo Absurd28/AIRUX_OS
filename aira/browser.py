@@ -48,7 +48,8 @@ class BrowserSession:
                         self.profile_dir.mkdir(parents=True, exist_ok=True)
                         self._ctx = p.chromium.launch_persistent_context(
                             str(self.profile_dir), executable_path=CHROMIUM, headless=self.headless,
-                            args=["--no-first-run", "--no-default-browser-check"], viewport=None)
+                            args=["--no-first-run", "--no-default-browser-check", "--password-store=basic"],
+                            viewport=None)
                         self._page = self._ctx.pages[0] if self._ctx.pages else self._ctx.new_page()
                     box["value"] = fn(self._page)
                 except Exception as exc:

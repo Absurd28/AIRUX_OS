@@ -14,7 +14,7 @@ from aira.memory.embed import HashEmbedder
 from aira.memory.vault import Vault
 from aira.orchestrator import Orchestrator
 from aira.tts import PiperSpeaker, Speaker, choose_speaker
-from aira.voice import DIDNT_CATCH, STTError, Transcriber, VoiceSession, spoken_text
+from aira.voice import DIDNT_CATCH, STTError, Transcriber, VoiceSession, VoiceTurn, spoken_text, turn_report
 from test_guard import FakeLLM, call, reply, route
 
 
@@ -155,6 +155,37 @@ def test_transcriber_multipart_roundtrip(tmp_path):
     assert b'name="response_format"\r\n\r\njson' in seen["body"]
 
 
+@pytest.mark.skipif(not (Path("/srv/airux-work/models/kokoro-v1.0.onnx")).exists(), reason="Kokoro not downloaded")
+def test_kokoro_runs_out_of_process(tmp_path):
+    import subprocess
+    import sys
+    sp = Speaker(play=False)
+    try:
+        secs = sp.synth("Hello Aryan.", tmp_path / "a.wav")
+        assert secs > 0.5 and (tmp_path / "a.wav").stat().st_size > 10_000
+        assert "af_bella" in sp.voices()
+        assert "kokoro_onnx" not in sys.modules and "phonemizer" not in sys.modules
+        assert sp._worker.poll() is None             # one long-lived worker
+        sp.synth("Again.", tmp_path / "b.wav")
+    finally:
+        sp.close()
+    # every module in this process stays free of the GPL speech stack
+    out = subprocess.run([sys.executable, "-c", "import aira.voice, aira.tts, aira.orchestrator, sys; "
+                          "print(any(m.startswith(('kokoro_onnx','phonemizer','espeakng')) for m in sys.modules))"],
+                         capture_output=True, text=True)
+    assert out.stdout.strip() == "False"
+
+
 def test_transcriber_unreachable():
     with pytest.raises(STTError):
         Transcriber("http://127.0.0.1:9", timeout=2).transcribe(Path(__file__))
+
+
+def test_playback_failure_is_reported_not_hidden():
+    vt = VoiceTurn("a.wav", "hello", spoken="Hi boss.",
+                   speech={"spoken": False, "error": "Connection failure: Connection refused"})
+    assert "not spoken aloud: Connection failure" in turn_report(vt)
+    ok = VoiceTurn("a.wav", "hello", spoken="Hi boss.", speech={"spoken": True})
+    assert "not spoken" not in turn_report(ok)
+    off = VoiceTurn("a.wav", "hello", spoken="Hi boss.", speech={"spoken": False, "error": "playback disabled"})
+    assert "not spoken" not in turn_report(off)

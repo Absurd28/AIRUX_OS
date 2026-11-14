@@ -1,0 +1,19 @@
+[Unit]
+Description=AIRA embedding server (memory vault search)
+After=network.target
+
+[Service]
+Type=exec
+User=aira
+Group=aira
+Environment=LD_LIBRARY_PATH=/opt/aira/bin-cpu
+ExecStart=/opt/aira/bin-cpu/llama-server --model /opt/aira/models/nomic-embed-text-v1.5.Q8_0.gguf --host 127.0.0.1 --port 8081 --embedding --n-gpu-layers 0 --ctx-size 2048 --threads 2 --cache-ram 0
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -98,15 +98,30 @@ def service_status(name: str) -> dict:
 def service_control(name: str, action: str) -> dict:
     unit = _check_service(name)
     service_status(unit)  # must exist
-    run(privileged(["systemctl", action, unit]), timeout=90)
+    # polkit authorises this for the "aira" group (AIRA's broker has already asked the user);
+    # --no-ask-password: never block on a password prompt, fail plainly instead
+    cmd = ["systemctl", "--no-ask-password", action, unit]
+    if os.geteuid() != 0 and not _polkit_rules_present():
+        cmd = privileged(cmd)   # development machines without the AIRUX polkit rule: sudo -n
+    run(cmd, timeout=90)
     return service_status(unit)
+
+
+POLKIT_RULE = Path("/usr/share/polkit-1/rules.d/50-aira.rules")
+
+
+def _polkit_rules_present() -> bool:
+    return POLKIT_RULE.exists()
 
 
 def install_package(name: str) -> dict:
     if not PACKAGE_RE.match(name):
         raise ToolError(f"invalid package name: {name!r}")
     run(["apt-cache", "show", name], timeout=30)  # fails plainly if the package does not exist
-    run(privileged(["apt-get", "install", "-y", "--no-install-recommends", name]), timeout=900)
+    if os.geteuid() != 0 and shutil.which("pkcon") and _polkit_rules_present():
+        run(["pkcon", "install", "--noninteractive", name], timeout=900)   # PackageKit, authorised by polkit
+    else:
+        run(privileged(["apt-get", "install", "-y", "--no-install-recommends", name]), timeout=900)
     ver = run(["dpkg-query", "-W", "-f=${Version}", name]).strip()
     return {"package": name, "installed_version": ver}
 

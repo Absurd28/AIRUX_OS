@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=AIRUX wallpaper
+Exec=/usr/lib/airux/set-wallpaper
+OnlyShowIn=XFCE;
+NoDisplay=true

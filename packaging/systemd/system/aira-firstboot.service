@@ -1,0 +1,15 @@
+[Unit]
+Description=AIRA first-boot hardware profile (recommends the model tier for this machine)
+ConditionPathExists=!/var/lib/aira/recommendation.json
+Before=aira-llm.service
+
+[Service]
+Type=oneshot
+User=aira
+Group=aira
+Environment=AIRUX_WORK=/opt/aira PYTHONPATH=/opt/aira/app
+ExecStart=/opt/aira/venv/bin/python -m aira.profiler --recommend /var/lib/aira/recommendation.json
+StateDirectory=aira
+
+[Install]
+WantedBy=multi-user.target

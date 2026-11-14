@@ -237,3 +237,29 @@ def test_nightly_maintenance_runs_once_after_3am(vault, clock):
     assert [e for e in d.tick() if e["event"] == "maintenance"]
     clock.advance(minutes=1)
     assert not [e for e in d.tick() if e["event"] == "maintenance"]
+
+
+# ---------- vault key: never prompt for a locked keyring ----------
+
+def test_keyring_used_only_when_unlocked(tmp_path, monkeypatch):
+    import subprocess as sp
+    from aira.memory import keys
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("DBUS_SESSION_BUS_ADDRESS", "unix:path=/nonexistent")
+    monkeypatch.setattr(keys.shutil, "which", lambda name: "/usr/bin/" + name)
+    calls = []
+
+    def fake_run(cmd, **kw):
+        calls.append(cmd[0])
+        if cmd[0] == "gdbus":
+            return sp.CompletedProcess(cmd, 0, stdout=state["locked"], stderr="")
+        return sp.CompletedProcess(cmd, 1, stdout="", stderr="")   # secret-tool finds nothing
+    state = {"locked": "(<true>,)\n"}
+    monkeypatch.setattr(keys.subprocess, "run", fake_run)
+    key, source = keys.get_key()
+    assert source == "file" and "secret-tool" not in calls      # locked: keyring never touched
+    assert (tmp_path / "aira" / "vault.key").stat().st_mode & 0o777 == 0o600
+    calls.clear()
+    state["locked"] = "(<false>,)\n"
+    assert keys.keyring_unlocked()
+    assert keys.get_key()[0] == key                               # existing key file still wins after

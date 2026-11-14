@@ -17,7 +17,10 @@ def test_names_from_config_file_and_env(tmp_path, monkeypatch):
     monkeypatch.delenv("AIRA_USER_NAMES", raising=False)
     monkeypatch.delenv("AIRA_USER_NAME", raising=False)
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setattr(persona_mod, "gecos_first_name", lambda: [])
     assert load_names() == []
+    monkeypatch.setattr(persona_mod, "gecos_first_name", lambda: ["Aryan"])
+    assert load_names() == ["Aryan"]      # first name from the account, when nothing is configured
     (tmp_path / "aira").mkdir()
     (tmp_path / "aira" / "aira.toml").write_text('names = ["Aryan", "boss"]\n')
     assert load_names() == ["Aryan", "boss"]
