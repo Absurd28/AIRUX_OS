@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from . import citations, guard
 from .broker import Broker
 from .llm import LLM, LLMError
-from .tools.base import Registry, ToolResult
+from .tools.base import Registry, ToolResult, tool_cap
 
 PERSONA = ("You are part of AIRA (Adaptive Intelligent Research Assistant), the assistant built into AIRUX. "
            "Be calm, brief and direct. Never guess: if a file, app, service, container, event or fact "
@@ -23,7 +23,8 @@ PERSONA = ("You are part of AIRA (Adaptive Intelligent Research Assistant), the 
 
 ROLES = {
     "system": "You are AIRA's System agent: settings, power, network, services, packages, GPU and disk health.",
-    "desktop": "You are AIRA's Desktop agent: files and folders, applications and the clipboard.",
+    "desktop": "You are AIRA's Desktop agent: files and folders, applications, the clipboard, and the web "
+               "browser (open pages, search the web in the browser, read and click).",
     "dev": "You are AIRA's Dev agent: git, tests, terminal commands, Podman containers, Python environments, "
            "watching running jobs.",
     "research": "You are AIRA's Research agent: local notes and papers, document summaries with citations, "
@@ -86,7 +87,7 @@ class SubAgent:
         self.name = name
         self.registry = registry
         self.tools = registry.for_agent(name)
-        assert len(self.tools) <= 8, f"{name} has {len(self.tools)} tools"
+        assert len(self.tools) <= tool_cap(name), f"{name} has {len(self.tools)} tools"
         self.llm, self.broker, self.slot, self.max_steps = llm, broker, slot, max_steps
         self.user_name = user_name
         self.schema = self._schema()

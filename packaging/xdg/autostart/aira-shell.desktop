@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=AIRA
+Comment=AIRA, the Adaptive Intelligent Research Assistant (full-screen shell)
+Exec=python3 -m aira.shell
+Icon=aira
+Terminal=false
+OnlyShowIn=XFCE;
+X-GNOME-Autostart-enabled=true

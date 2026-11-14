@@ -1,0 +1,7 @@
+#!/bin/sh
+# Push-to-talk toggle for the AIRA shell; bound to a keyboard shortcut in Xfce.
+f="${XDG_STATE_HOME:-$HOME/.local/state}/aira/shell.token"
+[ -r "$f" ] || { echo "AIRA shell is not running" >&2; exit 1; }
+read -r port token < "$f"
+exec curl -fsS -X POST -H "X-AIRA-Token: $token" -H "Content-Type: application/json" \
+  "http://127.0.0.1:$port/ptt/toggle"

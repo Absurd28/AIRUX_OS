@@ -14,7 +14,7 @@ from aira.tools import build_registry
 from aira.memory.embed import HashEmbedder
 from aira.memory.vault import Vault
 from aira.tools.assistant import parse_ics
-from aira.tools.base import AGENTS, CONFIRM, MAX_TOOLS_PER_AGENT, Registry, Risk, Tool
+from aira.tools.base import AGENTS, CONFIRM, MAX_TOOLS_PER_AGENT, Registry, Risk, Tool, tool_cap
 from aira.tools.timeparse import parse_when
 
 NOW = dt.datetime(2026, 11, 14, 10, 30)  # a Saturday
@@ -58,7 +58,8 @@ def test_registry_shape(setup):
     _, reg, _ = setup
     assert 30 <= len(reg.tools) <= 40
     for a in AGENTS:
-        assert 1 <= len(reg.for_agent(a)) <= MAX_TOOLS_PER_AGENT
+        assert 1 <= len(reg.for_agent(a)) <= tool_cap(a)
+    assert tool_cap("desktop") == 9 and all(tool_cap(a) == MAX_TOOLS_PER_AGENT for a in AGENTS if a != "desktop")
     for t in reg.tools.values():
         s = t.args_schema()
         assert set(t.required) <= set(t.params), t.name

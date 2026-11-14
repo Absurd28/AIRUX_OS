@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AIRA</title>
+<style>
+  :root {
+    --bg: #0f1216; --panel: #161b22; --line: #262d36; --text: #e6e9ee; --muted: #8b95a3;
+    --accent: #7cc4ff; --you: #1d2733; --ok: #59c38a; --warn: #e7b553; --bad: #ef6f6c; --chip: #222a34;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 16px/1.45 "DejaVu Sans", system-ui, sans-serif; }
+  body { display: grid; grid-template-rows: auto 1fr auto; height: 100vh; }
+  header { display: flex; align-items: center; gap: 14px; padding: 14px 22px; border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 20px; margin: 0; letter-spacing: .5px; }
+  header .full { color: var(--muted); font-size: 14px; }
+  #state { margin-left: auto; padding: 4px 12px; border-radius: 999px; background: var(--chip); color: var(--muted);
+    font-size: 13px; }
+  #state.listening { background: #3a2a12; color: var(--warn); }
+  #state.thinking { background: #12283a; color: var(--accent); }
+  main { display: grid; grid-template-columns: 1fr 340px; min-height: 0; }
+  #log { overflow-y: auto; padding: 22px; display: flex; flex-direction: column; gap: 14px; }
+  .msg { max-width: 860px; padding: 12px 16px; border-radius: 12px; white-space: pre-wrap; word-wrap: break-word; }
+  .you { align-self: flex-end; background: var(--you); }
+  .aira { align-self: flex-start; background: var(--panel); border: 1px solid var(--line); }
+  .meta { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .tags { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .tag { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--chip); color: var(--muted); }
+  .tag.verified { color: var(--ok); } .tag.unverified, .tag.not-done { color: var(--warn); }
+  .tag.not-sure { color: var(--accent); } .tag.cited { color: var(--text); }
+  aside { border-left: 1px solid var(--line); padding: 18px; overflow-y: auto; display: flex; flex-direction: column;
+    gap: 22px; }
+  aside h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 0 0 10px; }
+  .agent { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--line); }
+  .agent .st { color: var(--muted); font-size: 13px; }
+  .agent.busy .st { color: var(--accent); }
+  .confirm { border: 1px solid var(--warn); border-radius: 10px; padding: 12px; background: #1d1810; }
+  .confirm .what { font-weight: 600; }
+  .confirm pre { margin: 6px 0; white-space: pre-wrap; color: var(--muted); font-size: 13px; }
+  .confirm .risk { color: var(--warn); font-size: 13px; }
+  .confirm .btns { display: flex; gap: 8px; margin-top: 10px; }
+  button { font: inherit; border: 0; border-radius: 8px; padding: 8px 16px; cursor: pointer; }
+  .yes { background: var(--ok); color: #08130d; } .no { background: var(--chip); color: var(--text); }
+  #none { color: var(--muted); font-size: 14px; }
+  footer { display: flex; gap: 10px; padding: 14px 22px; border-top: 1px solid var(--line); }
+  #text { flex: 1; font: inherit; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--panel); color: var(--text); }
+  #talk { background: var(--accent); color: #07121c; min-width: 120px; }
+  #talk.on { background: var(--warn); }
+  #send { background: var(--chip); color: var(--text); }
+</style>
+</head>
+<body>
+<header>
+  <h1>AIRA</h1><span class="full">Adaptive Intelligent Research Assistant</span>
+  <span id="state">idle</span>
+</header>
+<main>
+  <section id="log" aria-live="polite"></section>
+  <aside>
+    <div><h2>Agents</h2><div id="agents"></div></div>
+    <div><h2>Waiting for you</h2><div id="confirms"><div id="none">Nothing to confirm.</div></div></div>
+  </aside>
+</main>
+<footer>
+  <input id="text" placeholder="Type a command, or press Ctrl+Space to talk" autocomplete="off">
+  <button id="send">Send</button>
+  <button id="talk">Talk</button>
+</footer>
+<script>
+const TOKEN = "__AIRA_TOKEN__";
+const AGENTS = ["system", "desktop", "dev", "research", "assistant"];
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text; return e; };
+
+function post(path, body) {
+  return fetch(path, { method: "POST", headers: { "Content-Type": "application/json", "X-AIRA-Token": TOKEN },
+                       body: JSON.stringify(body || {}) }).then(r => r.json().catch(() => ({})));
+}
+function setState(s) { const st = $("state"); st.textContent = s; st.className = s; }
+
+const agentRows = {};
+for (const a of AGENTS) {
+  const row = el("div", "agent"); row.append(el("span", "", a), el("span", "st", "idle"));
+  agentRows[a] = row; $("agents").append(row);
+}
+function agent(a, busy, text) {
+  const r = agentRows[a]; if (!r) return;
+  r.classList.toggle("busy", busy); r.querySelector(".st").textContent = text;
+}
+
+function addMsg(who, text, meta, tags) {
+  const m = el("div", "msg " + who);
+  if (meta) m.append(el("div", "meta", meta));
+  m.append(document.createTextNode(text));
+  if (tags && tags.length) {
+    const t = el("div", "tags");
+    for (const g of tags) t.append(el("span", "tag " + g.replace(/ /g, "-"), g));
+    m.append(t);
+  }
+  $("log").append(m); $("log").scrollTop = $("log").scrollHeight;
+}
+
+const timers = {};
+function showConfirm(ev) {
+  $("none").style.display = "none";
+  const c = el("div", "confirm"); c.id = "c-" + ev.id;
+  c.append(el("div", "what", `${ev.agent} wants to run ${ev.tool}`));
+  c.append(el("pre", "", JSON.stringify(ev.args, null, 1)));
+  c.append(el("div", "risk", "Risk: " + ev.risks.join(", ")));
+  const left = el("div", "meta", ""); c.append(left);
+  const b = el("div", "btns"), yes = el("button", "yes", "Yes, do it"), no = el("button", "no", "No");
+  yes.onclick = () => post("/confirm", { id: ev.id, yes: true });
+  no.onclick = () => post("/confirm", { id: ev.id, yes: false });
+  b.append(yes, no); c.append(b); $("confirms").append(c);
+  let s = Math.round(ev.timeout);
+  timers[ev.id] = setInterval(() => { s -= 1; left.textContent = `Denied automatically in ${s}s`; }, 1000);
+}
+function closeConfirm(ev) {
+  clearInterval(timers[ev.id]); const c = $("c-" + ev.id); if (c) c.remove();
+  if (!document.querySelector(".confirm")) $("none").style.display = "";
+}
+
+const es = new EventSource("/events?token=" + TOKEN);
+es.onmessage = (m) => {
+  const ev = JSON.parse(m.data);
+  switch (ev.event) {
+    case "you": addMsg("you", ev.text, ev.via === "voice" ? "you (spoken)" : "you"); break;
+    case "aira": addMsg("aira", ev.text, "AIRA", ev.tags); break;
+    case "thinking": setState("thinking"); break;
+    case "listening": setState("listening"); break;
+    case "idle": setState("idle"); for (const a of AGENTS) agent(a, false, "idle"); break;
+    case "route": for (const r of ev.route) agent(r.agent, true, "queued"); break;
+    case "agent_start": agent(ev.agent, true, "working"); break;
+    case "agent_done": agent(ev.agent, false, ev.outcome + (ev.tools.length ? " · " + ev.tools.join(", ") : "")); break;
+    case "confirm": showConfirm(ev); break;
+    case "confirm_done": closeConfirm(ev); break;
+  }
+};
+
+function send() {
+  const t = $("text").value.trim(); if (!t) return;
+  $("text").value = ""; post("/command", { text: t });
+}
+$("send").onclick = send;
+$("text").addEventListener("keydown", (e) => { if (e.key === "Enter") send(); });
+let talking = false;
+function talk() {
+  talking = !talking; $("talk").classList.toggle("on", talking); $("talk").textContent = talking ? "Stop" : "Talk";
+  post("/ptt/" + (talking ? "start" : "stop"));
+}
+$("talk").onclick = talk;
+document.addEventListener("keydown", (e) => { if (e.ctrlKey && e.code === "Space") { e.preventDefault(); talk(); } });
+$("text").focus();
+</script>
+</body>
+</html>

@@ -14,6 +14,12 @@ from pathlib import Path
 from typing import Any, Callable
 
 MAX_TOOLS_PER_AGENT = 8
+# Tuned after phase 6 (CLAUDE.md allows it): the Desktop agent gets a 9th tool, the browser.
+TOOL_CAP = {"desktop": 9}
+
+
+def tool_cap(agent: str) -> int:
+    return TOOL_CAP.get(agent, MAX_TOOLS_PER_AGENT)
 AGENTS = ("system", "desktop", "dev", "research", "assistant")
 
 
@@ -95,8 +101,8 @@ class Registry:
             raise ValueError(f"duplicate tool {tool.name}")
         if tool.agent not in AGENTS:
             raise ValueError(f"unknown agent {tool.agent}")
-        if len(self.for_agent(tool.agent)) >= MAX_TOOLS_PER_AGENT:
-            raise ValueError(f"agent {tool.agent} already has {MAX_TOOLS_PER_AGENT} tools")
+        if len(self.for_agent(tool.agent)) >= tool_cap(tool.agent):
+            raise ValueError(f"agent {tool.agent} already has {tool_cap(tool.agent)} tools")
         self.tools[tool.name] = tool
         return tool
 

@@ -232,7 +232,57 @@ def _clipboard_readback(a: dict, result) -> tuple[bool, str]:
     return ok, "clipboard holds the text" if ok else "clipboard content differs"
 
 
-def register(reg: Registry) -> None:
+def make_browser_tool(session):
+    from ..browser import BrowserError, query_in_url
+
+    def browser(action: str, query: str = "", url: str = "", text: str = "") -> dict:
+        try:
+            if action == "open":
+                return session.open(url)
+            if action == "search":
+                if not query.strip():
+                    raise ToolError("say what to search for")
+                return {"query": query, **session.search(query)}
+            if action == "read":
+                return session.read()
+            if action == "click":
+                if not text.strip():
+                    raise ToolError("say which link or button to click")
+                return session.click(text)
+            if action == "back":
+                return session.back()
+        except BrowserError as exc:
+            raise ToolError(f"browser: {exc}") from None
+        raise ToolError(f"unknown browser action {action}")
+
+    def risk(a: dict) -> set[Risk]:
+        # anything that loads a page contacts a website: data leaves the machine
+        if a.get("action") == "read" or (a.get("action") == "open" and not a.get("url")):
+            return {Risk.READ}
+        return {Risk.SEND_OFF}
+
+    def readback(a: dict, result) -> tuple[bool, str]:
+        now = session.read()
+        if a["action"] == "search":
+            # a results page: the query in its URL, its words in the visible text, and links out to results
+            # (a search engine's bot-check page fails the last two)
+            words = [w for w in a["query"].lower().split() if len(w) > 2]
+            in_text = all(w in now["text"].lower() for w in words)
+            ok = query_in_url(now["url"], a["query"]) and in_text and now.get("outbound_links", 0) >= 3
+            return ok, (f"the browser shows results for '{a['query']}' ({now['title']}, "
+                        f"{now.get('outbound_links', 0)} result links)" if ok
+                        else f"the browser is on {now['url']} ({now['title']}), which does not look like results "
+                             f"for '{a['query']}'")
+        if a["action"] == "open":
+            want = a.get("url", "")
+            ok = (not want) or want.split("//")[-1].split("/")[0] in now["url"]
+            return ok, f"the browser is on {now['url']}"
+        return True, f"the browser is on {now['url']} ({now['title']})"
+
+    return browser, risk, readback
+
+
+def register(reg: Registry, browser_session=None) -> None:
     A = "desktop"
     reg.add(Tool("list_dir", A, "list the files and folders in a folder",
                  {"path": S("folder path"), "show_hidden": {"type": "boolean"}}, ["path"], list_dir,
@@ -264,3 +314,11 @@ def register(reg: Registry) -> None:
                  lambda a: {Risk.WRITE} if a.get("action") == "set" else {Risk.READ},
                  readback=lambda a, r: _clipboard_readback(a, r) if a.get("action") == "set" else (True, "read"),
                  changes_state=lambda a: a.get("action") == "set"))
+    if browser_session is not None:
+        fn, risk, rb = make_browser_tool(browser_session)
+        reg.add(Tool("browser", A, "control the web browser: open a page, search the web, read the page, "
+                     "click a link or button by its text, go back",
+                     {"action": S("what to do", enum=["open", "search", "read", "click", "back"]),
+                      "query": S("search terms, for search"), "url": S("address, for open"),
+                      "text": S("link or button text, for click")}, ["action"], fn, risk,
+                     readback=rb, changes_state=lambda a: a.get("action") != "read"))

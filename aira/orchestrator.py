@@ -15,6 +15,8 @@ from .llm import LLM, LLMError
 from .memory.embed import Embedder
 from .memory.keys import get_key
 from .memory.vault import Vault
+from .agents import AgentRun
+from .browser import BrowserSession
 from .swarm.controller import LoadController
 from .swarm.pheromones import PheromoneBoard
 from .swarm.workers import WorkerPool
@@ -78,7 +80,10 @@ class Orchestrator:
         self.board = PheromoneBoard(config.data_dir / "pheromones.db")
         self.pool = WorkerPool(self.board, limit=lambda: max(
             1, (os.cpu_count() or 2) * self.controller.slots // self.controller.max_slots))
-        self.registry = registry or build_registry(config, vault, key_source, llm=self.llm, pool=self.pool)
+        self.browser = BrowserSession(config.data_dir / "browser-profile")  # Chromium starts on first use
+        self.registry = registry or build_registry(config, vault, key_source, llm=self.llm, pool=self.pool,
+                                                   browser=self.browser)
+        self.listeners: list = []  # the shell subscribes here: callable(event: dict)
         self.broker = Broker(self.registry, None, confirm,
                              sink=lambda e: vault.add("action", json.dumps(e, default=str), embed=False))
         # slot 0 = orchestrator, 1..5 = sub-agents (wrapping if the server has fewer slots)
@@ -103,6 +108,20 @@ class Orchestrator:
             {"type": "object", "properties": {"voice": {"enum": list(FEMALE_VOICES)}}, "required": ["voice"],
              "additionalProperties": False},
         ]}
+
+    def emit(self, event: str, **data) -> None:
+        for fn in list(self.listeners):
+            try:
+                fn({"event": event, **data})
+            except Exception:
+                pass
+
+    def _run_agent(self, agent: str, task: str, command: str) -> AgentRun:
+        self.emit("agent_start", agent=agent, task=task)
+        run = self.agents[agent].run(task, command)
+        self.emit("agent_done", agent=agent, outcome=run.outcome,
+                  tools=[s.tool for s in run.tool_calls])
+        return run
 
     def action_log(self) -> list[dict]:
         """The action log entries from the vault, oldest first."""
@@ -167,8 +186,9 @@ class Orchestrator:
         for t in r.get("route", []):
             tasks[t["agent"]] = (tasks[t["agent"]] + " Also: " + t["task"]) if t["agent"] in tasks else t["task"]
         turn.route = [{"agent": a, "task": t} for a, t in tasks.items()]
+        self.emit("route", route=turn.route)
         with ThreadPoolExecutor(max_workers=max(1, min(len(tasks), self.controller.slots))) as pool:
-            turn.runs = list(pool.map(lambda kv: self.agents[kv[0]].run(kv[1], command), tasks.items()))
+            turn.runs = list(pool.map(lambda kv: self._run_agent(kv[0], kv[1], command), tasks.items()))
         turn.kind = "ask" if any(run.outcome == "ask" for run in turn.runs) else "routed"
         turn.reply = "\n".join(run.text for run in turn.runs if run.text)
         return turn
