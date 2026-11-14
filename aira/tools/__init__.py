@@ -7,11 +7,11 @@ from . import assistant, desktop, dev, research, system
 from .base import Registry
 
 
-def build_registry(config: Config, vault: Vault, key_source: str = "") -> Registry:
+def build_registry(config: Config, vault: Vault, key_source: str = "", llm=None, pool=None) -> Registry:
     reg = Registry()
     system.register(reg)
     desktop.register(reg)
     dev.register(reg, vault)
-    research.register(reg)
+    research.register(reg, pool, llm)
     assistant.register(reg, vault, key_source)
     return reg

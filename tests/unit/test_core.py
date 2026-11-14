@@ -131,6 +131,8 @@ RISKY_CALLS = [
     ("dev", "containers", {"name": "db", "action": "rm"}),
     ("dev", "python_env", {"action": "install", "path": "~/venv", "package": "numpy"}),
     ("research", "arxiv_search", {"query": "transformers"}),
+    ("research", "web_search", {"query": "transformers"}),
+    ("research", "fetch_page", {"url": "https://example.org"}),
     ("assistant", "forget", {"topic": "project x"}),
 ]
 
@@ -156,6 +158,7 @@ def test_every_tool_with_confirm_risk_is_covered(setup):
 
 def test_failing_risk_function_blocks_call(setup):
     cfg, reg, calls = setup
+    reg = Registry()  # every real agent already has its full 8 tools
     reg.add(Tool("boom", "research", "x", {}, [], lambda: "ran", lambda a: 1 / 0))
     d, _ = Broker(reg, cfg.action_log, lambda *a: True).execute("research", "boom", {})
     assert not d.allowed

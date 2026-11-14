@@ -153,7 +153,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--file", type=Path, help="transcribe and run one WAV file")
     args = ap.parse_args(argv)
     cfg = Config()
-    orch = Orchestrator(cfg, tty_confirm)
+    orch = Orchestrator(cfg, tty_confirm, start_controller=True)
     speaker = choose_speaker(probe().total_memory, out_dir=cfg.data_dir / "speech")
     session = VoiceSession(orch, Transcriber(), speaker)
     if args.file:

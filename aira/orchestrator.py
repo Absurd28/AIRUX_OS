@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import os
 import re
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
@@ -14,6 +15,9 @@ from .llm import LLM, LLMError
 from .memory.embed import Embedder
 from .memory.keys import get_key
 from .memory.vault import Vault
+from .swarm.controller import LoadController
+from .swarm.pheromones import PheromoneBoard
+from .swarm.workers import WorkerPool
 from .tools import build_registry
 from .tts import FEMALE_VOICES
 from .tools.base import AGENTS, Registry
@@ -51,7 +55,7 @@ class Turn:
 
 class Orchestrator:
     def __init__(self, config: Config, confirm: Confirmer, registry: Registry | None = None,
-                 llm: LLM | None = None, vault: Vault | None = None):
+                 llm: LLM | None = None, vault: Vault | None = None, start_controller: bool = False):
         config.ensure_dirs()
         self.config = config
         self.llm = llm or LLM(config.server_url, config.request_timeout)
@@ -60,14 +64,23 @@ class Orchestrator:
             key, key_source = get_key()
             vault = Vault(config.vault_path, key, embedder=Embedder())
         self.vault = vault
-        self.registry = registry or build_registry(config, vault, key_source)
-        self.broker = Broker(self.registry, None, confirm,
-                             sink=lambda e: vault.add("action", json.dumps(e, default=str), embed=False))
         try:
             slots = self.llm.total_slots()
         except LLMError:
             slots = 1
         self.slots = max(1, slots)
+        # swarm: load controller (active model slots), pheromone board, worker pool
+        self.controller = LoadController(max_slots=self.slots, slots=self.slots)
+        if hasattr(self.llm, "on_latency"):
+            self.llm.on_latency = self.controller.record_latency
+        if start_controller:
+            self.controller.start()
+        self.board = PheromoneBoard(config.data_dir / "pheromones.db")
+        self.pool = WorkerPool(self.board, limit=lambda: max(
+            1, (os.cpu_count() or 2) * self.controller.slots // self.controller.max_slots))
+        self.registry = registry or build_registry(config, vault, key_source, llm=self.llm, pool=self.pool)
+        self.broker = Broker(self.registry, None, confirm,
+                             sink=lambda e: vault.add("action", json.dumps(e, default=str), embed=False))
         # slot 0 = orchestrator, 1..5 = sub-agents (wrapping if the server has fewer slots)
         self.agents = {name: SubAgent(name, self.registry, self.llm, self.broker,
                                       slot=(i + 1) % self.slots, max_steps=config.max_agent_steps,
@@ -154,7 +167,7 @@ class Orchestrator:
         for t in r.get("route", []):
             tasks[t["agent"]] = (tasks[t["agent"]] + " Also: " + t["task"]) if t["agent"] in tasks else t["task"]
         turn.route = [{"agent": a, "task": t} for a, t in tasks.items()]
-        with ThreadPoolExecutor(max_workers=min(len(tasks), self.slots) or 1) as pool:
+        with ThreadPoolExecutor(max_workers=max(1, min(len(tasks), self.controller.slots))) as pool:
             turn.runs = list(pool.map(lambda kv: self.agents[kv[0]].run(kv[1], command), tasks.items()))
         turn.kind = "ask" if any(run.outcome == "ask" for run in turn.runs) else "routed"
         turn.reply = "\n".join(run.text for run in turn.runs if run.text)

@@ -6,6 +6,7 @@ grammar, so the model can only produce JSON that matches (grounding layer 1).
 from __future__ import annotations
 
 import json
+import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -29,6 +30,7 @@ class LLM:
     def __init__(self, base_url: str, timeout: float = 300.0):
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
+        self.on_latency = None  # set by the load controller: called with seconds per request
 
     def _post(self, path: str, body: dict) -> dict:
         req = urllib.request.Request(self.base_url + path, data=json.dumps(body).encode(),
@@ -59,7 +61,10 @@ class LLM:
             body["id_slot"] = slot
         if seed is not None:
             body["seed"] = seed
+        t0 = time.monotonic()
         r = self._post("/v1/chat/completions", body)
+        if self.on_latency is not None:
+            self.on_latency(time.monotonic() - t0)
         try:
             msg = r["choices"][0]["message"]
             content = msg.get("content") or ""

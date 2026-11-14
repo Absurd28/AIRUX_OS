@@ -64,6 +64,13 @@ class Broker:
                 return f"{k} must be an integer"
             if t == "boolean" and not isinstance(v, bool):
                 return f"{k} must be true or false"
+            if t == "array":
+                if not isinstance(v, list):
+                    return f"{k} must be a list"
+                if spec.get("items", {}).get("type") == "string" and not all(isinstance(x, str) for x in v):
+                    return f"{k} must be a list of strings"
+                if "maxItems" in spec and len(v) > spec["maxItems"]:
+                    return f"{k} has more than {spec['maxItems']} items"
             if "enum" in spec and v not in spec["enum"]:
                 return f"{k} must be one of {spec['enum']}"
             if t == "integer":

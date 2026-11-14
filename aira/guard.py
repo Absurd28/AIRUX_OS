@@ -217,12 +217,13 @@ def claims_done(text: str) -> bool:
 # Layer 9 wording: a reply saying the information is not there is an abstention, and AIRA always
 # says so with the same phrase. Only phrases about missing *information* count; "there are no
 # uncommitted changes" is a grounded answer, not an abstention.
+_ADV = r"(?:\w+ly )?"  # one optional adverb: "not directly reported", "doesn't currently show"
 UNAVAILABLE = re.compile(
-    r"\b(not available|isn't available|is unavailable|not shown|not provided|not included|not reported|"
-    r"no information|no data (?:on|about|for)|(?:doesn't|does not|don't|do not|didn't|did not) "
-    r"(?:show|include|report|"
-    r"provide|contain|list|mention|say)|not (?:in|part of) the (?:tool )?(?:results?|output|data)|"
-    r"cannot be determined|can't be determined|couldn't find|could not find|no record of)\b", re.I)
+    rf"\b((?:not|isn't|aren't) {_ADV}(?:available|shown|provided|included|reported|listed|exposed)|"
+    rf"is unavailable|no information|no data (?:on|about|for)|"
+    rf"(?:doesn't|does not|don't|do not|didn't|did not) {_ADV}(?:show|include|report|provide|contain|list|"
+    rf"mention|say|expose)|not (?:in|part of) the (?:tool )?(?:results?|output|data)|"
+    rf"cannot be determined|can't be determined|couldn't find|could not find|no record of)\b", re.I)
 
 
 def normalise_abstention(text: str) -> str:

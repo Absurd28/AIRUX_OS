@@ -222,6 +222,9 @@ def test_claims_done():
     ("I couldn't find any line mentioning 3e-4.", True),
     ("There is no information about project Falcon.", True),
     ("I'm not sure. The fan speed is not shown.", True),         # already phrased: unchanged
+    ("The GPU fan speed is not directly reported by the system. The temperature is 54°C.", True),
+    ("The tool doesn't currently expose fan speed.", True),
+    ("Fan speed isn't listed in the GPU status.", True),
     ("The repository is clean; there are no uncommitted changes.", False),
     ("The cron service is running.", False),
 ])
@@ -272,6 +275,29 @@ def test_abbreviations_are_not_file_names():
     ev.add({"x": 1})
     assert set(guard.check_reply("Give a path, e.g. ~/notes, i.e. a folder, by 9 a.m. tomorrow.", ev)) == {
         "path ~/notes is not in the tool results", "number 9 is not in the tool results"}
+
+
+def test_research_answer_flags_unsupported_sentence(home, tmp_path):
+    (home / "notes" / "lab-notes.md").write_text("The transformer run diverged at step 400 after warmup.\n")
+    script = [route("research", "search notes"), call("search_notes", query="transformer"),
+              reply("The transformer run diverged at step 400 after warmup. "
+                    "The team fixed it by switching to the Lion optimizer.")]
+    orch, _, _ = make(home, tmp_path, script)
+    turn = orch.handle("What happened to the transformer run?")
+    assert "warmup. The team fixed it by switching to the Lion optimizer. [unsupported]" in turn.reply
+    assert "Sources: [1]" in turn.reply and "lab-notes.md" in turn.reply
+    assert any(e.startswith("L8 partly unverified") for e in turn.runs[0].guard_events)
+
+
+def test_cut_off_answer_falls_back_to_tool_output(home, tmp_path):
+    from aira.llm import LLMError
+
+    def cut_off(*a):
+        raise LLMError("model output is not valid JSON (truncated?): '{\"tool\": \"reply\"'")
+    orch, _, _ = make(home, tmp_path, [route("desktop", "list notes"), call("list_dir", path="~/notes"), cut_off])
+    turn = orch.handle("What's in my notes folder?")
+    assert turn.reply.startswith("I'm not sure how to put that briefly. Here is what list_dir returned")
+    assert "couldn't reach the model" not in turn.reply
 
 
 def test_number_with_unit_is_not_a_file_name():

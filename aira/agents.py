@@ -11,7 +11,7 @@ import datetime as dt
 import json
 from dataclasses import dataclass, field
 
-from . import guard
+from . import citations, guard
 from .broker import Broker
 from .llm import LLM, LLMError
 from .tools.base import Registry, ToolResult
@@ -24,9 +24,10 @@ PERSONA = ("You are part of AIRA (Adaptive Intelligent Research Assistant), the 
 ROLES = {
     "system": "You are AIRA's System agent: settings, power, network, services, packages, GPU and disk health.",
     "desktop": "You are AIRA's Desktop agent: files and folders, applications and the clipboard.",
-    "dev": "You are AIRA's Dev agent: git, tests, terminal commands, Podman containers, Python environments.",
-    "research": "You are AIRA's Research agent: local notes and papers, datasets (row and column counts), "
-                "and arXiv search.",
+    "dev": "You are AIRA's Dev agent: git, tests, terminal commands, Podman containers, Python environments, "
+           "watching running jobs.",
+    "research": "You are AIRA's Research agent: local notes and papers, document summaries with citations, "
+                "datasets (row and column counts), arXiv and web search, and running Jupyter notebooks.",
     "assistant": "You are AIRA's Assistant agent: reminders, calendar events, and facts remembered about the user.",
 }
 
@@ -108,7 +109,7 @@ class SubAgent:
                 schema: dict | None = None) -> dict:
         """One constrained model step (no execution)."""
         c = self.llm.chat(messages, schema or self.schema, slot=self.slot, temperature=temperature,
-                          max_tokens=400, seed=seed)
+                          max_tokens=800, seed=seed)
         return c.data or {}
 
     def first_messages(self, task: str, now: dt.datetime | None = None) -> list[dict]:
@@ -187,9 +188,19 @@ class SubAgent:
                 messages.append({"role": "assistant", "content": json.dumps({"tool": tool, "args": args})})
                 messages.append({"role": "user", "content": _result_message(tool, decision.reason, result, s)})
         except LLMError as exc:
+            ok_calls = [s for s in out.tool_calls if (s.result or {}).get("ok")]
+            if "truncated" in str(exc) and ok_calls:
+                # the model's answer was cut off after the tools ran: give the tool output instead
+                last = ok_calls[-1]
+                out.outcome = "reply"
+                out.guard_events.append("answer cut off; replying with the tool output")
+                out.text = "\n".join([f"{guard.NOT_SURE[:-1]} how to put that briefly. Here is what {last.tool} "
+                                      f"returned: {guard.compact(last.result.get('data'))}"]
+                                     + guard.status_lines(out.tool_calls))
+                return out
             out.outcome = "error"
-            out.text = "\n".join([f"{guard.COULDNT_VERIFY}: I couldn't reach the model ({exc})."]
-                                 + guard.status_lines(out.tool_calls))
+            why = "the model's answer was cut off" if "truncated" in str(exc) else f"I couldn't reach the model ({exc})"
+            out.text = "\n".join([f"{guard.COULDNT_VERIFY}: {why}."] + guard.status_lines(out.tool_calls))
             return out
         out.outcome = "step_limit"
         out.text = "\n".join([f"{guard.NOT_SURE} I stopped after {self.max_steps} steps without finishing."]
@@ -247,8 +258,51 @@ class SubAgent:
         if normalised != text:
             out.guard_events.append("L9 unavailability reply normalised to 'I'm not sure'")
             text = normalised
+        # layer 8: research answers carry sources; sentences no source supports are flagged
+        if self.name == "research" and text and not text.lower().startswith("i'm not sure"):
+            srcs = research_sources(ok_calls)
+            if srcs is not None:
+                checked = citations.check(text, srcs)
+                out.guard_events.append(f"L8 {checked.label}: {len(checked.unsupported)} unsupported of "
+                                        f"{len(checked.sentences)} sentences")
+                text = checked.render()
         out.text = "\n".join([text] + lines) if text else "\n".join(lines)
         return out
+
+
+TEXT_TOOLS = {"search_notes", "read_document", "summarize_document", "arxiv_search", "web_search", "fetch_page"}
+
+
+def research_sources(ok_calls: list[Step]) -> list[citations.Source] | None:
+    """Text sources behind a research answer, or None if no text tool was used (then layer 8 does
+    not apply: e.g. dataset_info numbers are checked by layer 7)."""
+    if not any(s.tool in TEXT_TOOLS for s in ok_calls):
+        return None
+    out: list[citations.Source] = []
+
+    def add(ref, text):
+        if ref and text:
+            out.append(citations.Source(len(out) + 1, str(ref), str(text)))
+
+    for s in ok_calls:
+        d = (s.result or {}).get("data") or {}
+        if s.tool == "search_notes":
+            for part in d.get("searches", [d]):
+                for h in part.get("results", []):
+                    add(h.get("path"), h.get("snippet"))
+        elif s.tool == "read_document":
+            add(d.get("path"), d.get("text"))
+        elif s.tool == "summarize_document":
+            add(d.get("path"), " ".join(x["text"] for x in d.get("sentences", []) if x.get("supported")))
+        elif s.tool == "arxiv_search":
+            for p in d.get("papers", []):
+                add(p.get("url"), f"{p.get('title')}. {p.get('summary')}")
+        elif s.tool == "web_search":
+            for r in d.get("results", []):
+                add(r.get("url"), f"{r.get('title')}. {r.get('snippet')}")
+        elif s.tool == "fetch_page":
+            add(d.get("url"), d.get("text"))
+    return out
 
 
 def _result_message(tool: str, decision: str, result: ToolResult, step: Step) -> str:

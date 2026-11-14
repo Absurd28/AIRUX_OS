@@ -50,7 +50,7 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     confirm = deny if args.deny_all else tty_confirm
-    orch = Orchestrator(Config(), confirm)
+    orch = Orchestrator(Config(), confirm, start_controller=True)
     if args.once:
         show(orch.handle(args.once), args.json)
         return 0
