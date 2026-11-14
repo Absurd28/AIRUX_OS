@@ -36,15 +36,18 @@ Answer with one JSON object, one of:
 - {{"chat": "greeting" | "thanks" | "about" | "smalltalk"}}: a greeting ("hi", "hello"), thanks,
   "about" ONLY when the user asks who or what AIRA is, or smalltalk: social chat with no factual
   question in it ("how are you", "tell me a joke", "I'm exhausted", "good night", "you're great").
-  Anything asking for a fact is NOT smalltalk. Questions about the user ("what do you know about
+  Anything asking for a fact is NOT smalltalk, and a command ("delete it", "do it") is never smalltalk. Questions about the user ("what do you know about
   me", "what's my name") go to the assistant agent.
 - {{"ask": <question>}}: if the command is too unclear to route.
 - {{"unsupported": true}}: if no agent above has a way to find this out (for example the weather,
   prices, other people's private information, or things only the user knows).
-- {{"voice": <name>}}: the user asks AIRA to change its voice to one of: {voices}.
+- {{"voice": <name>}}: the user asks AIRA to change, switch or use a different voice for herself
+  ("switch your voice to Bella", "use the Nicole voice", "go back to Heart"). Voices: {voices}.
 Never answer questions yourself: route them, ask, or say unsupported."""
 
 CHAT = ("greeting", "thanks", "about", "smalltalk")
+MEMORY_COMMAND = re.compile(r"^\W*(?:(?:hey |ok |okay )?aira,?\s+)?(?:please\s+)?"
+                            r"(?:pause|resume|unpause|stop|start|export)\s+(?:my |your |the )?memory\b", re.I)
 
 
 @dataclass
@@ -163,7 +166,10 @@ class Orchestrator:
             turn.notes.append(f"L3 uncovered topic: {topic}")
             return turn
         try:
-            r = self.route(command)
+            # the memory voice commands from CLAUDE.md always reach the tool: small talk must never
+            # answer "pause memory" with a promise while memory keeps recording
+            r = {"route": [{"agent": "assistant", "task": command}]} if MEMORY_COMMAND.match(command) \
+                else self.route(command)
         except LLMError as exc:
             turn.kind, turn.reply = "error", f"I couldn't reach the model: {exc}"
             return turn

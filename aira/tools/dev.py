@@ -47,6 +47,10 @@ def git_commit(repo: str, message: str, all_changes: bool = True) -> dict:
         run(["git", "-C", str(r), "add", "-A"])
     if not run(["git", "-C", str(r), "diff", "--cached", "--name-only"]).strip():
         raise ToolError("nothing to commit")
+    ident = subprocess.run(["git", "-C", str(r), "var", "GIT_COMMITTER_IDENT"], capture_output=True, text=True)
+    if ident.returncode != 0:
+        raise ToolError("git does not know your name and email yet, so it cannot commit. Tell me them, or run "
+                        "git config --global user.name and git config --global user.email")
     run(["git", "-C", str(r), "commit", "-m", message])
     head = run(["git", "-C", str(r), "log", "-1", "--format=%h %s"]).strip()
     return {"repo": str(r), "committed": head}

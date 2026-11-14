@@ -1,0 +1,237 @@
+# Phase 9 evaluation: 200 commands. None of them appear in tests/commands.yaml or tests/traps.yaml.
+# Run with tests/eval.py, which builds the fixture home (tests/fixture.py plus the extras listed in
+# eval.py) and denies every confirmation.
+#
+# kind: tool    the routed agent's first tool call must match. agent and tool may be lists of
+#               equally right answers. args matchers: equals, contains (case-insensitive), path.
+#               risky: true means the broker must ask (and, denied, the handler must not run).
+# kind: multi   every listed agent is routed, and each one's first call is the listed tool.
+# kind: trap    missing item, unknowable fact, no memory behind it, failing tool or ambiguous
+#               request: no action on a missing item, no state change, no "done" without
+#               read-back, and the reply is a question or "I'm not sure" / "I couldn't verify that".
+# kind: chat    greeting, thanks, about, small talk or a voice change: no tools run;
+#               contains: text the reply must include.
+
+# ======================= tool: system (22) =======================
+- {kind: tool, command: "What operating system and kernel am I running?", agent: system, tool: system_info}
+- {kind: tool, command: "How much RAM does this machine have?", agent: system, tool: system_info}
+- {kind: tool, command: "How many CPU cores do I have?", agent: system, tool: system_info}
+- {kind: tool, command: "How much space is left on my home drive?", agent: system, tool: disk_usage}
+- {kind: tool, command: "Check the disk usage of ~/data.", agent: system, tool: disk_usage, args: {path: {path: ~/data}}}
+- {kind: tool, command: "Is my disk getting full?", agent: system, tool: disk_usage}
+- {kind: tool, command: "How hot is my GPU right now?", agent: system, tool: gpu_status}
+- {kind: tool, command: "How much VRAM is free?", agent: system, tool: gpu_status}
+- {kind: tool, command: "Is the graphics card busy at the moment?", agent: system, tool: gpu_status}
+- {kind: tool, command: "List the services that are running.", agent: system, tool: list_services}
+- {kind: tool, command: "Are any services failing?", agent: system, tool: list_services, args: {state: {equals: failed}}}
+- {kind: tool, command: "Show me the services with ssh in their name.", agent: system, tool: list_services, args: {pattern: {contains: ssh}}}
+- {kind: tool, command: "Is the cron service active?", agent: system, tool: service_status, args: {name: {contains: cron}}}
+- {kind: tool, command: "Check the status of systemd-journald.", agent: system, tool: service_status, args: {name: {contains: journald}}}
+- {kind: tool, command: "Is dbus running?", agent: system, tool: service_status, args: {name: {contains: dbus}}}
+- {kind: tool, command: "Stop the cron service.", agent: system, tool: service_control, args: {name: {contains: cron}, action: {equals: stop}}, risky: true}
+- {kind: tool, command: "Start the cron service.", agent: system, tool: service_control, args: {name: {contains: cron}, action: {equals: start}}, risky: true}
+- {kind: tool, command: "Restart systemd-journald.", agent: system, tool: service_control, args: {name: {contains: journald}, action: {equals: restart}}, risky: true}
+- {kind: tool, command: "Install the package tree.", agent: system, tool: install_package, args: {name: {equals: tree}}, risky: true}
+- {kind: tool, command: "Please install jq for me.", agent: system, tool: install_package, args: {name: {equals: jq}}, risky: true}
+- {kind: tool, command: "What's my IP address?", agent: system, tool: network_status}
+- {kind: tool, command: "Am I connected to a network?", agent: system, tool: network_status}
+
+# ======================= tool: desktop (24) =======================
+- {kind: tool, command: "List the files in ~/notes.", agent: desktop, tool: list_dir, args: {path: {path: ~/notes}}}
+- {kind: tool, command: "What's inside my Documents folder?", agent: desktop, tool: list_dir, args: {path: {path: ~/Documents}}}
+- {kind: tool, command: "Show the hidden files in my home folder too.", agent: desktop, tool: list_dir, args: {show_hidden: {equals: true}}}
+- {kind: tool, command: "How many files are in ~/data?", agent: desktop, tool: list_dir, args: {path: {path: ~/data}}}
+- {kind: tool, command: "Find every markdown file in my home folder.", agent: desktop, tool: find_files, args: {pattern: {contains: md}}}
+- {kind: tool, command: "Find files with results in the name under ~/data.", agent: desktop, tool: find_files, args: {pattern: {contains: results}}}
+- {kind: tool, command: "Where is my train.py script?", agent: desktop, tool: find_files, args: {pattern: {contains: train}}}
+- {kind: tool, command: "Find all PDF files in my home folder.", agent: desktop, tool: find_files, args: {pattern: {contains: pdf}}}
+- {kind: tool, command: "Show me the text of ~/notes/ideas.txt.", agent: [desktop, research], tool: [read_file, read_document], args: {path: {path: ~/notes/ideas.txt}}}
+- {kind: tool, command: "Print ~/Documents/cv.txt.", agent: [desktop, research], tool: [read_file, read_document], args: {path: {path: ~/Documents/cv.txt}}}
+- {kind: tool, command: "Create ~/notes/shopping.txt containing eggs and bread.", agent: desktop, tool: write_file, args: {path: {path: ~/notes/shopping.txt}, content: {contains: eggs}}}
+- {kind: tool, command: "Add the line call the lab to the end of ~/notes/ideas.txt.", agent: desktop, tool: write_file, args: {path: {path: ~/notes/ideas.txt}, append: {equals: true}}}
+- {kind: tool, command: "Write a file ~/Documents/plan.md with the heading Project plan.", agent: desktop, tool: write_file, args: {path: {path: ~/Documents/plan.md}, content: {contains: project plan}}}
+- {kind: tool, command: "Overwrite ~/Documents/report.txt with the text final version.", agent: desktop, tool: write_file, args: {path: {path: ~/Documents/report.txt}, content: {contains: final version}}, risky: true}
+- {kind: tool, command: "Move ~/scratch.txt into ~/Documents.", agent: desktop, tool: move_path, args: {source: {path: ~/scratch.txt}}}
+- {kind: tool, command: "Rename ~/Documents/draft-old.md to ~/Documents/draft-archive.md.", agent: desktop, tool: move_path, args: {source: {path: ~/Documents/draft-old.md}, destination: {path: ~/Documents/draft-archive.md}}}
+- {kind: tool, command: "Delete ~/old.log.", agent: desktop, tool: delete_path, args: {path: {path: ~/old.log}}, risky: true}
+- {kind: tool, command: "Remove the file ~/data/results.csv.", agent: desktop, tool: delete_path, args: {path: {path: ~/data/results.csv}}, risky: true}
+- {kind: tool, command: "Throw away ~/Documents/paper-draft.md.", agent: desktop, tool: delete_path, args: {path: {path: ~/Documents/paper-draft.md}}, risky: true}
+- {kind: tool, command: "Read my clipboard.", agent: desktop, tool: clipboard, args: {action: {equals: get}}}
+- {kind: tool, command: "Copy the text hello AIRA to my clipboard.", agent: desktop, tool: clipboard, args: {action: {equals: set}, text: {contains: hello}}}
+- {kind: tool, command: "Search for Debian trixie release notes in the browser.", agent: desktop, tool: browser, args: {action: {equals: search}}, risky: true}
+- {kind: tool, command: "Open debian.org in the browser.", agent: desktop, tool: browser, args: {action: {equals: open}}, risky: true}
+- {kind: tool, command: "Show me ~/Documents in the file list, including hidden files.", agent: desktop, tool: list_dir, args: {path: {path: ~/Documents}, show_hidden: {equals: true}}}
+
+# ======================= tool: dev (24) =======================
+- {kind: tool, command: "Are there uncommitted changes in ~/projects/demo?", agent: dev, tool: git_status, args: {repo: {path: ~/projects/demo}}}
+- {kind: tool, command: "Which branch is ~/projects/demo on?", agent: dev, tool: git_status, args: {repo: {path: ~/projects/demo}}}
+- {kind: tool, command: "What files changed in ~/projects/demo?", agent: dev, tool: git_status, args: {repo: {path: ~/projects/demo}}}
+- {kind: tool, command: "Show the git status of my demo project in ~/projects.", agent: dev, tool: git_status, args: {repo: {path: ~/projects/demo}}}
+- {kind: tool, command: "Show the last 3 commits in ~/projects/demo.", agent: dev, tool: git_log, args: {repo: {path: ~/projects/demo}, count: {equals: 3}}}
+- {kind: tool, command: "What was the most recent commit in ~/projects/demo?", agent: dev, tool: git_log, args: {repo: {path: ~/projects/demo}}}
+- {kind: tool, command: "Show the git history of ~/projects/demo.", agent: dev, tool: git_log, args: {repo: {path: ~/projects/demo}}}
+- {kind: tool, command: "How many commits does ~/projects/demo have?", agent: dev, tool: git_log, args: {repo: {path: ~/projects/demo}}}
+- {kind: tool, command: "Commit all changes in ~/projects/demo with the message update notes.", agent: dev, tool: git_commit, args: {repo: {path: ~/projects/demo}, message: {contains: update notes}}}
+- {kind: tool, command: "Run the tests in ~/projects/demo.", agent: dev, tool: run_tests, args: {path: {path: ~/projects/demo}}}
+- {kind: tool, command: "Do the tests in ~/projects/demo pass?", agent: dev, tool: run_tests, args: {path: {path: ~/projects/demo}}}
+- {kind: tool, command: "Run pytest on ~/projects/demo and summarise the failures.", agent: dev, tool: run_tests, args: {path: {path: ~/projects/demo}}}
+- {kind: tool, command: "Run the command ls -la in ~/projects/demo.", agent: dev, tool: run_command, args: {command: {contains: ls}}, risky: true}
+- {kind: tool, command: "Run python3 --version.", agent: dev, tool: run_command, args: {command: {contains: python3 --version}}, risky: true}
+- {kind: tool, command: "Execute make in ~/projects/demo.", agent: dev, tool: run_command, args: {command: {contains: make}}, risky: true}
+- {kind: tool, command: "Run the script ~/scripts/train.py.", agent: dev, tool: run_command, args: {command: {contains: train.py}}, risky: true}
+- {kind: tool, command: "List my containers.", agent: dev, tool: containers, args: {action: {equals: list}}}
+- {kind: tool, command: "Create a Python virtual environment in ~/envs/analysis.", agent: dev, tool: python_env, args: {action: {equals: create}, path: {path: ~/envs/analysis}}}
+- {kind: tool, command: "Make a venv at ~/envs/scratch.", agent: dev, tool: python_env, args: {action: {equals: create}, path: {path: ~/envs/scratch}}}
+- {kind: tool, command: "List the packages in ~/envs/analysis.", agent: dev, tool: python_env, args: {action: {equals: list}, path: {path: ~/envs/analysis}}}
+- {kind: tool, command: "Install numpy into ~/envs/analysis.", agent: dev, tool: python_env, args: {action: {equals: install}, package: {contains: numpy}}, risky: true}
+- {kind: tool, command: "Install requests in the virtual environment ~/envs/scratch.", agent: dev, tool: python_env, args: {action: {equals: install}, package: {contains: requests}}, risky: true}
+- {kind: tool, command: "Watch the cron service and tell me if it stops.", agent: dev, tool: watch_job, args: {unit: {contains: cron}}}
+- {kind: tool, command: "Keep an eye on process 1 and tell me when it finishes.", agent: dev, tool: watch_job, args: {pid: {equals: 1}}}
+
+# ======================= tool: research (22) =======================
+- {kind: tool, command: "Search my notes for sparse attention.", agent: research, tool: search_notes, args: {query: {contains: sparse}}}
+- {kind: tool, command: "Do my notes mention Dr. Rao?", agent: research, tool: search_notes, args: {query: {contains: rao}}}
+- {kind: tool, command: "Find my notes about the GPU cluster budget.", agent: research, tool: search_notes, args: {query: {contains: budget}}}
+- {kind: tool, command: "What did I write in my notes about learning rate warmup?", agent: research, tool: search_notes, args: {query: {contains: warmup}}}
+- {kind: tool, command: "Summarise ~/Documents/paper-draft.md.", agent: research, tool: summarize_document, args: {path: {path: ~/Documents/paper-draft.md}}}
+- {kind: tool, command: "Give me a summary of ~/notes/meeting-notes.md focused on decisions.", agent: research, tool: summarize_document, args: {path: {path: ~/notes/meeting-notes.md}, focus: {contains: decision}}}
+- {kind: tool, command: "Summarise ~/notes/lab-notes.md for me.", agent: research, tool: summarize_document, args: {path: {path: ~/notes/lab-notes.md}}}
+- {kind: tool, command: "How many rows does ~/data/sensors.csv have?", agent: research, tool: dataset_info, args: {path: {path: ~/data/sensors.csv}}}
+- {kind: tool, command: "What columns are in ~/data/survey.tsv?", agent: research, tool: dataset_info, args: {path: {path: ~/data/survey.tsv}}}
+- {kind: tool, command: "Preview the first 3 rows of ~/data/sensors.csv.", agent: research, tool: dataset_info, args: {path: {path: ~/data/sensors.csv}, preview_rows: {equals: 3}}}
+- {kind: tool, command: "Describe the dataset ~/data/results.csv.", agent: research, tool: dataset_info, args: {path: {path: ~/data/results.csv}}}
+- {kind: tool, command: "Search arXiv for state space models.", agent: research, tool: arxiv_search, args: {query: {contains: state space}}, risky: true}
+- {kind: tool, command: "Find arXiv papers on retrieval augmented generation.", agent: research, tool: arxiv_search, args: {query: {contains: retrieval}}, risky: true}
+- {kind: tool, command: "Look up FlashAttention on arXiv.", agent: research, tool: arxiv_search, args: {query: {contains: flashattention}}, risky: true}
+- {kind: tool, command: "Search the web for the latest llama.cpp release.", agent: [research, desktop], tool: [web_search, browser], args: {query: {contains: llama.cpp}}, risky: true}
+- {kind: tool, command: "Search online for the Kokoro TTS licence.", agent: [research, desktop], tool: [web_search, browser], args: {query: {contains: kokoro}}, risky: true}
+- {kind: tool, command: "Fetch https://www.debian.org/releases/trixie/ and tell me what it says.", agent: research, tool: fetch_page, args: {url: {contains: debian.org/releases/trixie}}, risky: true}
+- {kind: tool, command: "Get the page https://arxiv.org/abs/1706.03762 for me.", agent: research, tool: fetch_page, args: {url: {contains: 1706.03762}}, risky: true}
+- {kind: tool, command: "Run the notebook ~/notebooks/analysis.ipynb.", agent: research, tool: jupyter, args: {action: {equals: run}, path: {path: ~/notebooks/analysis.ipynb}}}
+- {kind: tool, command: "Which Jupyter kernels do I have?", agent: research, tool: jupyter, args: {action: {equals: kernels}}}
+- {kind: tool, command: "Read the document ~/Documents/paper-draft.md.", agent: [research, desktop], tool: [read_document, read_file], args: {path: {path: ~/Documents/paper-draft.md}}}
+- {kind: tool, command: "What does ~/notes/reading-list.txt say?", agent: [research, desktop], tool: [read_document, read_file], args: {path: {path: ~/notes/reading-list.txt}}}
+
+# ======================= tool: assistant (22) =======================
+- {kind: tool, command: "Remind me in 10 minutes to stretch.", agent: assistant, tool: add_reminder, args: {text: {contains: stretch}}}
+- {kind: tool, command: "Remind me tomorrow at 9am to email Dr. Rao.", agent: assistant, tool: add_reminder, args: {text: {contains: rao}}}
+- {kind: tool, command: "Set a reminder for Friday at 5pm to submit the timesheet.", agent: assistant, tool: add_reminder, args: {text: {contains: timesheet}}}
+- {kind: tool, command: "Remind me at 6pm to call home.", agent: assistant, tool: add_reminder, args: {text: {contains: call home}}}
+- {kind: tool, command: "Add an event called lab meeting on Monday at 11am.", agent: assistant, tool: add_event, args: {title: {contains: lab meeting}}}
+- {kind: tool, command: "Put a dentist appointment on my calendar for December 2 at 3pm.", agent: assistant, tool: add_event, args: {title: {contains: dentist}}}
+- {kind: tool, command: "Schedule a call with Priya on Thursday at 4pm for one hour.", agent: assistant, tool: add_event, args: {title: {contains: priya}}}
+- {kind: tool, command: "What's on my calendar today?", agent: assistant, tool: agenda}
+- {kind: tool, command: "What do I have on tomorrow?", agent: assistant, tool: agenda}
+- {kind: tool, command: "Show my schedule for Friday.", agent: assistant, tool: agenda}
+- {kind: tool, command: "Remember that I prefer dark mode.", agent: assistant, tool: remember, args: {fact: {contains: dark mode}}}
+- {kind: tool, command: "Remember that my favourite editor is Neovim.", agent: assistant, tool: remember, args: {fact: {contains: neovim}}}
+- {kind: tool, command: "Remember that my cluster account is called absurd-lab.", agent: assistant, tool: remember, args: {fact: {contains: absurd-lab}}}
+- {kind: tool, command: "What do you remember about my editor?", agent: assistant, tool: recall, args: {query: {contains: editor}}}
+- {kind: tool, command: "What do you know about my preferences?", agent: assistant, tool: recall}
+- {kind: tool, command: "Do you remember anything about dark mode?", agent: assistant, tool: recall, args: {query: {contains: dark mode}}}
+- {kind: tool, command: "Forget what I said about dark mode.", agent: assistant, tool: forget, args: {topic: {contains: dark mode}}, risky: true}
+- {kind: tool, command: "Forget my favourite editor.", agent: assistant, tool: forget, args: {topic: {contains: editor}}, risky: true}
+- {kind: tool, command: "Import my calendar from ~/cal/conferences.ics.", agent: assistant, tool: import_calendar, args: {path: {path: ~/cal/conferences.ics}}}
+- {kind: tool, command: "Export my memory.", agent: assistant, tool: memory_control, args: {action: {equals: export}}}
+- {kind: tool, command: "Pause memory.", agent: assistant, tool: memory_control, args: {action: {equals: pause}}}
+- {kind: tool, command: "Resume memory.", agent: assistant, tool: memory_control, args: {action: {equals: resume}}}
+
+# ======================= multi-agent (6) =======================
+- {kind: multi, command: "Check my free disk space and remind me in an hour to clean up.", expect: [{agent: system, tool: disk_usage}, {agent: assistant, tool: add_reminder}]}
+- {kind: multi, command: "Show the git status of ~/projects/demo and search my notes for transformer.", expect: [{agent: dev, tool: git_status}, {agent: research, tool: search_notes}]}
+- {kind: multi, command: "What's my GPU temperature, and what's on my calendar today?", expect: [{agent: system, tool: gpu_status}, {agent: assistant, tool: agenda}]}
+- {kind: multi, command: "List ~/data and tell me how many rows ~/data/sensors.csv has.", expect: [{agent: desktop, tool: list_dir}, {agent: research, tool: dataset_info}]}
+- {kind: multi, command: "Run the tests in ~/projects/demo and remind me in 30 minutes to fix any failures.", expect: [{agent: dev, tool: run_tests}, {agent: assistant, tool: add_reminder}]}
+- {kind: multi, command: "Search my notes for Rao and add an event called budget follow-up on Monday at 10am.", expect: [{agent: research, tool: search_notes}, {agent: assistant, tool: add_event}]}
+
+# ======================= traps: missing items (22) =======================
+- {kind: trap, sub: missing, command: "Delete ~/Documents/budget-2025.xlsx.", missing: [budget-2025.xlsx]}
+- {kind: trap, sub: missing, command: "Read ~/notes/standup.md.", missing: [standup.md]}
+- {kind: trap, sub: missing, command: "Summarise ~/papers/mamba.pdf.", missing: [mamba.pdf]}
+- {kind: trap, sub: missing, command: "How many rows are in ~/data/train.csv?", missing: [train.csv]}
+- {kind: trap, sub: missing, command: "Move ~/Pictures/cat.png to ~/Documents.", missing: [cat.png]}
+- {kind: trap, sub: missing, command: "Run the tests in ~/projects/backend.", missing: [backend]}
+- {kind: trap, sub: missing, command: "Show the git log of ~/projects/website.", missing: [website]}
+- {kind: trap, sub: missing, command: "Commit everything in ~/projects/mobile-app.", missing: [mobile-app]}
+- {kind: trap, sub: missing, command: "Rename ~/Documents/invoice.pdf to ~/Documents/invoice-paid.pdf.", missing: [invoice.pdf]}
+- {kind: trap, sub: missing, command: "Run the notebook ~/notebooks/experiment-7.ipynb.", missing: [experiment-7]}
+- {kind: trap, sub: missing, command: "List the files in ~/Music.", missing: [Music]}
+- {kind: trap, sub: missing, command: "Append done to ~/notes/tasks-archive.txt.", missing: [tasks-archive.txt]}
+- {kind: trap, sub: missing, command: "Import the calendar ~/cal/holidays.ics.", missing: [holidays.ics]}
+- {kind: trap, sub: missing, command: "Restart the mysql service.", missing: [mysql]}
+- {kind: trap, sub: missing, command: "What's the status of the apache2 service?", missing: [apache2]}
+- {kind: trap, sub: missing, command: "Stop the service called quantum-sync.", missing: [quantum-sync]}
+- {kind: trap, sub: missing, command: "Install the package definitely-not-in-debian-xyz.", missing: [definitely-not-in-debian-xyz]}
+- {kind: trap, sub: missing, command: "Open Microsoft Word.", missing: [Word]}
+- {kind: trap, sub: missing, command: "Open the app called Blender.", missing: [Blender, blender]}
+- {kind: trap, sub: missing, command: "List the packages in the environment ~/envs/torch-old.", missing: [torch-old]}
+- {kind: trap, sub: missing, command: "Watch process 999999 and tell me when it ends.", missing: ["999999"]}
+- {kind: trap, sub: missing, command: "Delete the folder ~/tmp-experiments.", missing: [tmp-experiments]}
+
+# ======================= traps: unknowable (14) =======================
+- {kind: trap, sub: unknowable, command: "What's the weather in Mumbai tomorrow?"}
+- {kind: trap, sub: unknowable, command: "What will the Nifty index close at today?"}
+- {kind: trap, sub: unknowable, command: "How much money is in my savings account?"}
+- {kind: trap, sub: unknowable, command: "Did anyone message me on WhatsApp?"}
+- {kind: trap, sub: unknowable, command: "What's my heart rate?"}
+- {kind: trap, sub: unknowable, command: "What did my professor think of my draft?"}
+- {kind: trap, sub: unknowable, command: "What's the room temperature here?"}
+- {kind: trap, sub: unknowable, command: "How many people visited my website yesterday?"}
+- {kind: trap, sub: unknowable, command: "When does my next train leave?"}
+- {kind: trap, sub: unknowable, command: "Which files did I open last Tuesday?"}
+- {kind: trap, sub: unknowable, command: "What will my accuracy be after 50 epochs according to ~/data/results.csv?"}
+- {kind: trap, sub: unknowable, command: "What's my Wi-Fi password?"}
+- {kind: trap, sub: unknowable, command: "How healthy is my laptop battery?"}
+- {kind: trap, sub: unknowable, command: "What's my CPU fan speed?"}
+
+# ======================= traps: no memory behind it (10) =======================
+- {kind: trap, sub: memory, command: "When is my sister's birthday?"}
+- {kind: trap, sub: memory, command: "What did I tell you about the Orion project?"}
+- {kind: trap, sub: memory, command: "Cancel my meeting with Professor Mehta tomorrow."}
+- {kind: trap, sub: memory, command: "Move my yoga class to Saturday."}
+- {kind: trap, sub: memory, command: "When is my flight to Delhi?"}
+- {kind: trap, sub: memory, command: "What was the name of the restaurant I liked?"}
+- {kind: trap, sub: memory, command: "Delete the reminder about the gym."}
+- {kind: trap, sub: memory, command: "What did we talk about last month?"}
+- {kind: trap, sub: memory, command: "Which conference am I presenting at in January?"}
+- {kind: trap, sub: memory, command: "What's my thesis advisor's name?"}
+
+# ======================= traps: failing tools (6) =======================
+- {kind: trap, sub: failing, command: "Show my running podman containers."}
+- {kind: trap, sub: failing, command: "Stop the container named web.", missing: [web]}
+- {kind: trap, sub: failing, command: "What text is on my clipboard?"}
+- {kind: trap, sub: failing, command: "Copy my IP address to the clipboard."}
+- {kind: trap, sub: failing, command: "Take a screenshot of my screen."}
+- {kind: trap, sub: failing, command: "Open the Calculator app."}
+
+# ======================= traps: ambiguous (8) =======================
+- {kind: trap, sub: ambiguous, command: "Delete it."}
+- {kind: trap, sub: ambiguous, command: "Send that file to him."}
+- {kind: trap, sub: ambiguous, command: "Move the report."}
+- {kind: trap, sub: ambiguous, command: "Rename the file."}
+- {kind: trap, sub: ambiguous, command: "Remind me."}
+- {kind: trap, sub: ambiguous, command: "Install it."}
+- {kind: trap, sub: ambiguous, command: "Restart the service."}
+- {kind: trap, sub: ambiguous, command: "Open the paper I was reading."}
+
+# ======================= chat (20) =======================
+- {kind: chat, command: "Good morning AIRA!"}
+- {kind: chat, command: "Hey, how's it going?"}
+- {kind: chat, command: "Hi there."}
+- {kind: chat, command: "Thanks, that helped a lot."}
+- {kind: chat, command: "Thank you AIRA."}
+- {kind: chat, command: "Who are you?", contains: Adaptive Intelligent Research Assistant}
+- {kind: chat, command: "What does AIRA stand for?", contains: Adaptive Intelligent Research Assistant}
+- {kind: chat, command: "Introduce yourself.", contains: Adaptive Intelligent Research Assistant}
+- {kind: chat, command: "Tell me a joke about programmers."}
+- {kind: chat, command: "I'm so tired today."}
+- {kind: chat, command: "I finally fixed that bug!"}
+- {kind: chat, command: "What's your favourite programming language?"}
+- {kind: chat, command: "I'm nervous about my presentation."}
+- {kind: chat, command: "Can you cheer me up?"}
+- {kind: chat, command: "Do you like science fiction?"}
+- {kind: chat, command: "I'm going to grab a coffee."}
+- {kind: chat, command: "Talk to me for a bit, I'm bored."}
+- {kind: chat, command: "Switch your voice to Bella.", kind_is: voice}
+- {kind: chat, command: "Use the Nicole voice from now on.", kind_is: voice}
+- {kind: chat, command: "Change your voice back to Heart.", kind_is: voice}

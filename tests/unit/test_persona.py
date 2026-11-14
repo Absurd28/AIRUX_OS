@@ -156,6 +156,20 @@ def test_companion_blocks_invented_facts(tmp_path):
     assert text and "model unavailable" in events[0]
 
 
+def test_companion_never_claims_an_action():
+    # eval case 173: "Delete it." reached small talk and the model said "Either way, done."
+    llm = ScriptLLM(["Delete it? The bad memories of this weekend? Either way, done.",
+                     "Consider it deleted, boss."])
+    text, events = Companion(llm, Persona(["Aryan"]), None).reply("Delete it.")
+    assert "done" not in text.lower() and "deleted" not in text.lower()
+    assert any("claims an action" in e for e in events) and "using a fixed line" in events[-1]
+    # an action word triggers one retry; a clean second answer is used
+    llm = ScriptLLM(["All set! Why do programmers prefer dark mode? Light attracts bugs.",
+                     "Why do programmers prefer dark mode? Light attracts bugs."])
+    text, events = Companion(llm, Persona([]), None).reply("tell me a joke")
+    assert text.startswith("Why do programmers") and "claims an action" in events[0]
+
+
 def test_router_smalltalk_goes_to_companion(tmp_path, monkeypatch):
     home = tmp_path / "home"
     home.mkdir()
@@ -165,3 +179,22 @@ def test_router_smalltalk_goes_to_companion(tmp_path, monkeypatch):
     turn = orch.handle("I'm so tired today")
     assert turn.kind == "chat" and "break" in turn.reply and executed == []
     assert "smalltalk" in str(orch.router_schema)
+
+
+def test_memory_voice_commands_skip_the_router(tmp_path, monkeypatch):
+    # eval case 113: "Pause memory." went to small talk, which promised to stop remembering
+    from aira.orchestrator import MEMORY_COMMAND
+    for said in ("Pause memory.", "pause my memory", "AIRA, resume memory", "Please export my memory",
+                 "Stop your memory"):
+        assert MEMORY_COMMAND.match(said), said
+    for said in ("What do you remember about me?", "My memory is bad today", "Remind me to pause"):
+        assert not MEMORY_COMMAND.match(said), said
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+    # no router answer is scripted: the first model call must be the assistant agent's tool call
+    orch, llm, executed = make(home, tmp_path, [{"tool": "memory_control", "args": {"action": "pause"}},
+                                                {"tool": "reply", "args": {"text": "Memory is paused."}}])
+    turn = orch.handle("Pause memory.")
+    assert [r["agent"] for r in turn.route] == ["assistant"]
+    assert executed == ["memory_control"] and orch.vault.paused

@@ -205,6 +205,24 @@ def test_dev_git_status(setup, home):
     assert not r.ok and "not a git repository" in r.error
 
 
+def test_git_commit_without_identity_says_so_plainly(setup, home, monkeypatch):
+    cfg, reg, _ = setup
+    for k in ("GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL", "GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL", "EMAIL"):
+        monkeypatch.delenv(k, raising=False)
+    # like a fresh user account: no global git config, and no guessing an address from the host name
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(home / "no-gitconfig"))
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+    monkeypatch.setenv("GIT_CONFIG_COUNT", "1")
+    monkeypatch.setenv("GIT_CONFIG_KEY_0", "user.useConfigOnly")
+    monkeypatch.setenv("GIT_CONFIG_VALUE_0", "true")
+    repo = home / "proj2"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    (repo / "a.py").write_text("x = 1\n")
+    _, r = Broker(reg, cfg.action_log).execute("dev", "git_commit", {"repo": "~/proj2", "message": "first"})
+    assert not r.ok and "does not know your name and email" in r.error and "***" not in r.error
+
+
 def test_assistant_reminders_and_forget(setup):
     cfg, reg, _ = setup
     b = Broker(reg, cfg.action_log, lambda *a: True)
@@ -237,12 +255,15 @@ def test_ics_parse():
     ("tomorrow 9am", "2026-11-15T09:00"), ("tomorrow at 14:15", "2026-11-15T14:15"),
     ("monday 10am", "2026-11-16T10:00"), ("saturday 10am", "2026-11-21T10:00"),
     ("2026-12-01 08:00", "2026-12-01T08:00"), ("2026-12-01", "2026-12-01T09:00"),
+    ("in an hour", "2026-11-14T11:30"), ("in a minute", "2026-11-14T10:31"),
+    ("in ten minutes", "2026-11-14T10:40"), ("in half an hour", "2026-11-14T11:00"),
+    ("in forty-five minutes", "2026-11-14T11:15"), ("in two days", "2026-11-16T10:30"),
 ])
 def test_parse_when(text, expected):
     assert parse_when(text, NOW).isoformat(timespec="minutes") == expected
 
 
-@pytest.mark.parametrize("text", ["sometime", "6", "25:00", "tomorrow", "13pm"])
+@pytest.mark.parametrize("text", ["sometime", "6", "25:00", "tomorrow", "13pm", "in a while", "in some hours"])
 def test_parse_when_rejects(text):
     with pytest.raises(ValueError):
         parse_when(text, NOW)

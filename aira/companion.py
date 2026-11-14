@@ -23,7 +23,8 @@ RULES = """You are just chatting with the user right now: no tools, no tasks.
   factual, say you'd need to check and offer to.
 - No emoji (your words are spoken aloud).
 - If asked who you are, say you're AIRA, the Adaptive Intelligent Research Assistant.
-- Jokes: short, kind, nerdy is good. If they sound stressed or tired, be supportive first."""
+- Jokes: short, kind, nerdy is good. If they sound stressed or tired, be supportive first.
+- You cannot do anything in this chat. Never say something is done, deleted, saved, set or sent."""
 SCHEMA = {"type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"],
           "additionalProperties": False}
 
@@ -58,12 +59,14 @@ class Companion:
                 events.append(f"companion: model unavailable ({exc})")
                 break
             problems = guard.check_reply(text, ev)
+            if guard.claims_done(text):   # chat runs no tools, so nothing can have been done
+                problems.append("claims an action, but small talk runs no tools")
             if text and not problems:
                 return text, events
             events.append(f"companion L7 problems: {problems or ['empty']}")
             msgs = msgs + [{"role": "assistant", "content": text},
                            {"role": "user", "content": "Say that again without any numbers, names, paths or "
-                            "facts you were not given."}]
+                            "facts you were not given, and without saying anything was done."}]
         events.append("companion: using a fixed line")
         return self.persona.pick([f"I'm here{self.persona.address(0.8)}. What's on your mind?",
                                   f"Always happy to chat{self.persona.address(0.8)}."]), events

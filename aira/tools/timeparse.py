@@ -1,6 +1,7 @@
 """Parse human time expressions in code, so the model never computes timestamps.
 
-Accepted: "in 5 minutes", "in 2 hours", "in 3 days", "18:30", "6pm", "6:15 pm",
+Accepted: "in 5 minutes", "in 2 hours", "in 3 days", "in an hour", "in ten minutes",
+"in half an hour", "18:30", "6pm", "6:15 pm",
 "tomorrow 9am", "tomorrow at 09:00", "today 17:00", "monday 10am", ISO "2026-11-14T18:00",
 "2026-11-14 18:00", "2026-11-14". Anything else raises ValueError (AIRA then asks the user).
 """
@@ -11,6 +12,20 @@ import re
 
 WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 _REL = re.compile(r"^in\s+(\d+)\s*(minute|min|hour|hr|day|week)s?$")
+NUMBER_WORDS = {"a": 1, "an": 1, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7,
+                "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12, "fifteen": 15, "twenty": 20,
+                "thirty": 30, "forty": 40, "forty-five": 45, "forty five": 45, "fifty": 50, "sixty": 60,
+                "ninety": 90}
+
+
+def _numbers_to_digits(s: str) -> str:
+    """"in an hour" -> "in 1 hour", "in half an hour" -> "in 30 minutes" (relative times only)."""
+    if re.fullmatch(r"in half an? hour", s):
+        return "in 30 minutes"
+    m = re.fullmatch(r"in (.+?) (minutes?|mins?|hours?|hrs?|days?|weeks?)", s)
+    if m and m.group(1) in NUMBER_WORDS:
+        return f"in {NUMBER_WORDS[m.group(1)]} {m.group(2)}"
+    return s
 _CLOCK = re.compile(r"^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$")
 
 
@@ -32,7 +47,7 @@ def _clock(text: str) -> dt.time:
 
 def parse_when(text: str, now: dt.datetime | None = None) -> dt.datetime:
     now = (now or dt.datetime.now()).replace(second=0, microsecond=0)
-    s = " ".join(text.lower().replace(" at ", " ").split())
+    s = _numbers_to_digits(" ".join(text.lower().replace(" at ", " ").split()))
     m = _REL.match(s)
     if m:
         n, unit = int(m.group(1)), m.group(2)
