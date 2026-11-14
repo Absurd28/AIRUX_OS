@@ -14,10 +14,11 @@ from dataclasses import dataclass, field
 from . import citations, guard
 from .broker import Broker
 from .llm import LLM, LLMError
+from .persona import Persona
 from .tools.base import Registry, ToolResult, tool_cap
 
 PERSONA = ("You are part of AIRA (Adaptive Intelligent Research Assistant), the assistant built into AIRUX. "
-           "Be calm, brief and direct. Never guess: if a file, app, service, container, event or fact "
+           "Never guess: if a file, app, service, container, event or fact "
            "is not confirmed by a tool result, say you are not sure or ask. Never invent tool results. "
            "\"I'm not sure\" is a correct answer when the tools do not show the answer.")
 
@@ -35,12 +36,15 @@ ROLES = {
 RULES = """Rules:
 - Answer with one JSON object: {"tool": <name>, "args": {...}}.
 - Use a tool to act or to look something up. After a tool result, either call another tool or finish.
-- Finish with {"tool": "reply", "args": {"text": ...}}: a short answer using only values that appear in
-  the tool results, with the same units (GiB stays GiB). If the results do not answer the question,
-  reply "I'm not sure" and say what you could not find.
+- Finish with {"tool": "reply", "args": {"text": ...}}: a short answer in your own warm voice, using
+  only values that appear in the tool results, with the same units (GiB stays GiB). If the results do
+  not answer the question, reply "I'm not sure" and say what you could not find.
 - If the request is unclear, a needed detail is missing, or something does not exist,
   use {"tool": "ask_user", "args": {"question": ...}} instead of guessing.
 - If no tool can answer the question, reply "I'm not sure" rather than answering from memory.
+- A result from a tool about something else is not an answer: an empty calendar says nothing about
+  email, messages or anything else. Never turn an unrelated or empty result into a claim.
+- Jokes never carry facts: do not wrap a claim the tools did not show inside a joke.
 - If a tool fails or is denied, say so plainly in the reply. Do not retry the same call.
 - Paths: use exactly what the user said. The home folder is ~ and things in it are ~/name
   (for example ~/notes, ~/old.log), never ~name. Do not invent paths."""
@@ -83,13 +87,13 @@ class AgentRun:
 
 class SubAgent:
     def __init__(self, name: str, registry: Registry, llm: LLM, broker: Broker, slot: int | None,
-                 max_steps: int = 4, user_name: str = ""):
+                 max_steps: int = 4, persona: Persona | None = None):
         self.name = name
         self.registry = registry
         self.tools = registry.for_agent(name)
         assert len(self.tools) <= tool_cap(name), f"{name} has {len(self.tools)} tools"
         self.llm, self.broker, self.slot, self.max_steps = llm, broker, slot, max_steps
-        self.user_name = user_name
+        self.persona = persona or Persona([])
         self.schema = self._schema()
         self.system_prompt = self._prompt()
 
@@ -103,8 +107,8 @@ class SubAgent:
 
     def _prompt(self) -> str:
         tools = "\n".join("- " + t.signature() for t in self.tools)
-        who = f" The user's name is {self.user_name}." if self.user_name else ""
-        return f"{PERSONA}{who}\n{ROLES[self.name]}\n\nTools:\n{tools}\n- reply(text)\n- ask_user(question)\n\n{RULES}"
+        return (f"{PERSONA}\n{self.persona.prompt()}\n{ROLES[self.name]}\n\nTools:\n{tools}\n- reply(text)\n"
+                f"- ask_user(question)\n\n{RULES}")
 
     def propose(self, messages: list[dict], seed: int | None = None, temperature: float = 0.0,
                 schema: dict | None = None) -> dict:

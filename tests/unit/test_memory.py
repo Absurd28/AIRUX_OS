@@ -11,6 +11,7 @@ import pytest
 
 from aira.memory.embed import HashEmbedder
 from aira.memory.vault import (EPISODE_LINE, HOT_CACHE_MAX, QUOTA_MIN, Vault, VaultLocked)
+from aira.persona import Persona
 from aira.reminderd import Daemon, briefing
 
 
@@ -170,7 +171,7 @@ def make_daemon(vault, locked=lambda: False, jobs=lambda pid, unit: None, mainte
     if maintenance_done:  # keep the day's maintenance out of reminder tests (tested on its own)
         vault.set_setting("last_maintenance", vault.clock().isoformat())
     d = Daemon(vault, lambda t, b: calls["notify"].append((t, b)) or (True, "sent"),
-               lambda text: calls["speak"].append(text) or {"spoken": True}, user_name="Absurd",
+               lambda text: calls["speak"].append(text) or {"spoken": True}, persona=Persona(["Absurd"]),
                locked=locked, jobs=jobs)
     return d, calls
 
@@ -185,7 +186,7 @@ def test_reminder_fires_once_at_due_time(vault, clock):
     ev = d.tick()
     assert [e["event"] for e in ev] == ["reminder"]
     assert calls["notify"] == [("AIRA reminder", "check the training run")]
-    assert calls["speak"] == ["Reminder, Absurd: check the training run"]
+    assert len(calls["speak"]) == 1 and "check the training run" in calls["speak"][0] and "Absurd" in calls["speak"][0]
     assert vault.get(rid).meta["fired"] == "2026-11-14T10:02:00"
     clock.advance(seconds=30)
     assert d.tick() == []                           # not repeated
@@ -204,7 +205,7 @@ def test_reminder_repeats_at_unlock(vault, clock):
     clock.advance(seconds=30)
     ev = d.tick()
     assert [e["event"] for e in ev] == ["reminder_repeat"]
-    assert calls["speak"][-1] == "While you were away, Absurd: stretch"
+    assert calls["speak"][-1].startswith("While you were away") and "stretch" in calls["speak"][-1]
     clock.advance(seconds=30)
     assert d.tick() == []
 
@@ -221,11 +222,11 @@ def test_watched_job_and_briefing(vault, clock):
     clock.advance(seconds=30)
     ev = d.tick()
     assert ev[0]["event"] == "job" and ev[0]["state"] == "failed"
-    assert calls["speak"][-1] == "training run has failed."
-    b = briefing(vault, clock(), "Absurd")
-    assert "Good morning, Absurd." in b["text"] and "group meeting at 14:00" in b["text"]
+    assert "training run has failed" in calls["speak"][-1]
+    b = briefing(vault, clock(), Persona(["Absurd"]))
+    assert b["text"].startswith("Good morning, Absurd") and "group meeting at 14:00" in b["text"]
     assert "submit form at 16:00" in b["text"] and "Watched job training run failed." in b["text"]
-    assert "Watched job" not in briefing(vault, clock(), "Absurd")["text"]  # only once
+    assert "Watched job" not in briefing(vault, clock(), Persona(["Absurd"]))["text"]  # only once
 
 
 def test_nightly_maintenance_runs_once_after_3am(vault, clock):

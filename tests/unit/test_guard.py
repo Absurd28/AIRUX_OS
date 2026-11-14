@@ -225,6 +225,11 @@ def test_claims_done():
     ("The GPU fan speed is not directly reported by the system. The temperature is 54°C.", True),
     ("The tool doesn't currently expose fan speed.", True),
     ("Fan speed isn't listed in the GPU status.", True),
+    ("Looks like I haven't stored any facts or reminders about 'project Falcon' yet.", True),
+    ("I don't have any notes on that, boss.", True),
+    ("There's nothing saved about your dentist.", True),
+    ("I have no reminders about Rao.", True),
+    ("I've stored your thesis deadline: March 3rd.", False),
     ("The repository is clean; there are no uncommitted changes.", False),
     ("The cron service is running.", False),
 ])
@@ -332,7 +337,7 @@ def test_fallback_says_not_sure(home, tmp_path):
 
 def test_router_unsupported_and_chat(home, tmp_path):
     orch, _, _ = make(home, tmp_path, [{"unsupported": True}, {"chat": "about"}])
-    assert orch.handle("What's the weather in Pune?").reply.startswith("I'm not sure")
+    assert orch.handle("What did I have for breakfast?").reply.startswith("I'm not sure")
     about = orch.handle("Who are you?").reply
     assert "Adaptive Intelligent Research Assistant" in about
     assert "chat" in str(orch.router_schema) and "reply" not in str(orch.router_schema)

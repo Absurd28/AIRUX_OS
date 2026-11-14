@@ -54,7 +54,7 @@ def orch(tmp_path, monkeypatch):
 
 def test_spoken_text_drops_verified_lines():
     assert spoken_text("Created ~/a.txt.\nVerified: ~/a.txt contains the text.") == "Created ~/a.txt."
-    assert spoken_text("I couldn't verify that: clipboard failed: x") == "I couldn't verify that: clipboard failed: x"
+    assert spoken_text("I couldn't verify that: clipboard failed: x") == "That didn't work: x."
 
 
 def test_voice_turn_runs_command_and_speaks(orch, tmp_path):
@@ -86,7 +86,7 @@ def test_change_voice_by_voice(orch, tmp_path):
     s = VoiceSession(o, FakeSTT("Change your voice to Bella."), sp)
     s.handle_audio(tmp_path / "x.wav")
     assert o.vault.setting("voice") == "af_bella"
-    assert sp.said[-1] == ("af_bella", "Okay, I'll speak with the Bella voice from now on.")
+    assert sp.said[-1][0] == "af_bella" and "Bella voice" in sp.said[-1][1]
     s.stt = FakeSTT("Thanks")
     s.handle_audio(tmp_path / "y.wav")
     assert sp.said[-1][0] == "af_bella"

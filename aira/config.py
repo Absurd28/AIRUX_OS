@@ -5,13 +5,20 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .persona import load_names
+
 
 @dataclass
 class Config:
     server_url: str = field(default_factory=lambda: os.environ.get("AIRA_SERVER", "http://127.0.0.1:8080"))
     data_dir: Path = field(default_factory=lambda: Path(
         os.environ.get("AIRA_DATA", Path.home() / ".local" / "share" / "aira")))
-    user_name: str = field(default_factory=lambda: os.environ.get("AIRA_USER_NAME", ""))
+    # what AIRA calls the user: ~/.config/aira/aira.toml names = [...] or AIRA_USER_NAMES="Aryan,boss"
+    user_names: list[str] = field(default_factory=load_names)
+
+    @property
+    def user_name(self) -> str:
+        return self.user_names[0] if self.user_names else ""
     max_agent_steps: int = 4
     request_timeout: float = 300.0
 

@@ -15,8 +15,11 @@ from .llm import LLM, LLMError
 from .memory.embed import Embedder
 from .memory.keys import get_key
 from .memory.vault import Vault
+from . import guard
 from .agents import AgentRun
 from .browser import BrowserSession
+from .companion import Companion
+from .persona import Persona
 from .swarm.controller import LoadController
 from .swarm.pheromones import PheromoneBoard
 from .swarm.workers import WorkerPool
@@ -30,20 +33,18 @@ ROUTER_RULES = """You are AIRA's orchestrator. Split the user's command into tas
 Answer with one JSON object, one of:
 - {{"route": [{{"agent": <agent>, "task": <instruction for that agent>}}, ...]}}: one task per agent needed.
   Keep each task self-contained and keep the user's exact names, paths and times.
-- {{"chat": "greeting" | "thanks" | "about"}}: a greeting, thanks, or a question about who AIRA is.
+- {{"chat": "greeting" | "thanks" | "about" | "smalltalk"}}: a greeting ("hi", "hello"), thanks,
+  "about" ONLY when the user asks who or what AIRA is, or smalltalk: social chat with no factual
+  question in it ("how are you", "tell me a joke", "I'm exhausted", "good night", "you're great").
+  Anything asking for a fact is NOT smalltalk. Questions about the user ("what do you know about
+  me", "what's my name") go to the assistant agent.
 - {{"ask": <question>}}: if the command is too unclear to route.
 - {{"unsupported": true}}: if no agent above has a way to find this out (for example the weather,
   prices, other people's private information, or things only the user knows).
 - {{"voice": <name>}}: the user asks AIRA to change its voice to one of: {voices}.
 Never answer questions yourself: route them, ask, or say unsupported."""
 
-CHAT = {
-    "greeting": "Hello{name}. I'm AIRA, your Adaptive Intelligent Research Assistant. What can I do for you?",
-    "thanks": "You're welcome{name}.",
-    "about": ("I'm AIRA, the Adaptive Intelligent Research Assistant built into AIRUX. I can check and control "
-              "the system, your files, code, research material and your schedule, and I ask before anything risky."),
-}
-UNSUPPORTED = "I'm not sure. I don't have a tool that can check that."
+CHAT = ("greeting", "thanks", "about", "smalltalk")
 
 
 @dataclass
@@ -52,7 +53,8 @@ class Turn:
     route: list[dict] = field(default_factory=list)
     runs: list[AgentRun] = field(default_factory=list)
     reply: str = ""
-    kind: str = ""  # "routed", "reply", "ask", "error"
+    kind: str = ""  # "routed", "reply", "chat", "ask", "unsupported", "voice", "error"
+    notes: list[str] = field(default_factory=list)
 
 
 class Orchestrator:
@@ -86,10 +88,12 @@ class Orchestrator:
         self.listeners: list = []  # the shell subscribes here: callable(event: dict)
         self.broker = Broker(self.registry, None, confirm,
                              sink=lambda e: vault.add("action", json.dumps(e, default=str), embed=False))
+        self.persona = Persona(config.user_names)
+        self.companion = Companion(self.llm, self.persona, vault, slot=0)
         # slot 0 = orchestrator, 1..5 = sub-agents (wrapping if the server has fewer slots)
         self.agents = {name: SubAgent(name, self.registry, self.llm, self.broker,
                                       slot=(i + 1) % self.slots, max_steps=config.max_agent_steps,
-                                      user_name=config.user_name)
+                                      persona=self.persona)
                        for i, name in enumerate(AGENTS)}
         self.router_prompt = PERSONA + "\n" + ROUTER_RULES.format(
             agents="\n".join(f"- {a}: {ROLES[a].split(': ', 1)[1]}" for a in AGENTS),
@@ -149,18 +153,37 @@ class Orchestrator:
 
     def _handle(self, command: str) -> Turn:
         turn = Turn(command)
+        # layer 3 in code: questions about things no tool can see never reach a model to be guessed at
+        topic = guard.uncovered_topic(command)
+        if topic:
+            turn.kind = "unsupported"
+            phrase, public = guard.topic_phrase(topic)
+            turn.reply = (f"I'm not sure{self.persona.address()} -- I can't see {phrase} from here."
+                          + (" I can search the web for it if you like." if public else ""))
+            turn.notes.append(f"L3 uncovered topic: {topic}")
+            return turn
         try:
             r = self.route(command)
         except LLMError as exc:
             turn.kind, turn.reply = "error", f"I couldn't reach the model: {exc}"
             return turn
         # the router never writes free-text answers (grounding layer 3): only fixed texts
-        name = f", {self.config.user_name}" if self.config.user_name else ""
+        p = self.persona
         if "chat" in r:
-            turn.kind, turn.reply = "reply", CHAT[r["chat"]].format(name=name)
+            turn.kind = "reply"
+            if r["chat"] == "greeting":
+                turn.reply = p.greeting(dt.datetime.now().hour)
+            elif r["chat"] == "thanks":
+                turn.reply = p.thanks()
+            elif r["chat"] == "about":
+                turn.reply = p.about()
+            else:  # smalltalk: the companion, no tools and no facts
+                turn.kind = "chat"
+                turn.reply, events = self.companion.reply(command)
+                turn.notes = events
             return turn
         if "unsupported" in r:
-            turn.kind, turn.reply = "unsupported", UNSUPPORTED
+            turn.kind, turn.reply = "unsupported", p.unsupported()
             return turn
         if "voice" in r:
             # the voice comes from the user's own words, not the model's pick (grounding)
@@ -174,8 +197,7 @@ class Orchestrator:
             self.vault.set_setting("voice", FEMALE_VOICES[choice])
             ok = self.vault.setting("voice") == FEMALE_VOICES[choice]  # read-back
             turn.kind = "voice"
-            turn.reply = (f"Okay{name}, I'll speak with the {choice.capitalize()} voice from now on."
-                          if ok else "I couldn't verify that the voice was changed.")
+            turn.reply = p.voice_changed(choice.capitalize()) if ok else "I couldn't verify that the voice was changed."
             return turn
         if "ask" in r:
             q = r["ask"].strip()

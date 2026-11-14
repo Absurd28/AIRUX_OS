@@ -198,6 +198,44 @@ def check_reply(reply: str, ev: Evidence) -> list[str]:
     return problems
 
 
+# ---------------- layer 3: topics no tool can see ----------------
+# AIRA has no tool that reads email, chat apps, the weather, markets, bank accounts or contacts.
+# A question about them can only be answered by guessing, so it is answered "I'm not sure" in code
+# before any model sees it -- unless the user asks to search the web or use the browser, which can
+# legitimately look such things up.
+UNCOVERED = re.compile(
+    r"\b(e-?mail(?:s|ed|ing)?|inbox|mailbox|text(?:ed)? messages?|texted|sms|whatsapp|telegram|"
+    r"slack messages?|dms?|weather|forecast|temperature outside|stock prices?|share prices?|bitcoin|"
+    r"crypto(?:currency)?|exchange rates?|bank balance|bank account|credit card|phone numbers?|"
+    r"contact details|who called|missed calls?)\b", re.I)
+WEB_INTENT = re.compile(r"\b(search|look up|google|browser|web|online|internet|arxiv|website|page)\b", re.I)
+# commands that only mention such a topic while asking for something AIRA can do ("remind me to
+# email Rao", "remember that my bank is X") are not questions about it
+TASK_INTENT = re.compile(r"^\s*(please\s+)?(remind|remember|note|write|draft|add|create|schedule|set|"
+                         r"make|save|forget)\b", re.I)
+
+
+def uncovered_topic(command: str) -> str | None:
+    """The topic word if the command asks about something no AIRA tool can see, else None."""
+    m = UNCOVERED.search(command)
+    if m and not WEB_INTENT.search(command) and not TASK_INTENT.search(command):
+        return m.group(1).lower()
+    return None
+
+
+def topic_phrase(topic: str) -> tuple[str, bool]:
+    """How to say what AIRA cannot see, and whether a web search could help (public information)."""
+    t = topic.lower()
+    for pattern, phrase, public in (
+            (r"mail|inbox", "your email", False), (r"text|sms|whatsapp|telegram|slack|dm", "your messages", False),
+            (r"call", "your calls", False), (r"phone|contact", "your contacts", False),
+            (r"bank|credit", "your bank accounts", False), (r"weather|forecast|outside", "the weather", True),
+            (r"bitcoin|crypto|stock|share|exchange", "live prices", True)):
+        if re.search(pattern, t):
+            return phrase, public
+    return t, False
+
+
 # ---------------- layers 3, 4, 6: code-written status ----------------
 
 DONE_WORDS = re.compile(r"\b(done|deleted|removed|created|renamed|moved|installed|restarted|started|stopped|"
@@ -209,6 +247,8 @@ NEGATION = re.compile(r"(\w+n['’]t\b|\b(?:not|cannot|unable|failed|no|without|
 
 def claims_done(text: str) -> bool:
     for sentence in re.split(r"(?<=[.!?])\s+", text):
+        if sentence.rstrip().endswith("?"):   # an offer or a question ("Want me to set it up?") claims nothing
+            continue
         if DONE_WORDS.search(sentence) and not NEGATION.search(sentence):
             return True
     return False
@@ -223,7 +263,11 @@ UNAVAILABLE = re.compile(
     rf"is unavailable|no information|no data (?:on|about|for)|"
     rf"(?:doesn't|does not|don't|do not|didn't|did not) {_ADV}(?:show|include|report|provide|contain|list|"
     rf"mention|say|expose)|not (?:in|part of) the (?:tool )?(?:results?|output|data)|"
-    rf"cannot be determined|can't be determined|couldn't find|could not find|no record of)\b", re.I)
+    rf"cannot be determined|can't be determined|couldn't find|could not find|no record of|"
+    # the persona's chattier ways of saying "I don't have that"
+    rf"(?:haven't|have not|hasn't|has not) {_ADV}(?:stored|saved|recorded|got|found|seen|noted)\b[^.?!]*\bany|"
+    rf"(?:don't|do not) {_ADV}have any|nothing (?:stored|saved|recorded|noted)|"
+    rf"no (?:facts|notes|records|events|reminders|memories|entries) (?:about|on|for|stored|saved))\b", re.I)
 
 
 def normalise_abstention(text: str) -> str:

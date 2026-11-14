@@ -24,6 +24,7 @@ import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .persona import humanize_line
 from .tts import DEFAULT_VOICE, FEMALE_VOICES, PiperSpeaker, Speaker, choose_speaker
 
 DIDNT_CATCH = "Sorry, I didn't catch that."
@@ -94,9 +95,14 @@ class Recorder:
 
 
 def spoken_text(reply: str) -> str:
-    """What AIRA says aloud: the reply without code-written 'Verified:' lines (shown, not spoken)."""
-    lines = [l for l in reply.splitlines() if l.strip() and not l.startswith("Verified:")]
-    return " ".join(lines)
+    """What AIRA says aloud. The screen keeps the precise status lines (they drive the shell's tags);
+    speech turns them into what a person would say and skips 'Verified:' and 'Sources:' lines."""
+    said = [humanize_line(l) for l in reply.splitlines()]
+    return EMOJI.sub("", " ".join(s for s in said if s)).strip()
+
+
+# emoji and pictographs are shown on screen but never read aloud
+EMOJI = re.compile("[\U0001F000-\U0001FAFF☀-➿️‍]+" + r"\s?")
 
 
 @dataclass

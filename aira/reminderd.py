@@ -22,6 +22,7 @@ from typing import Callable
 
 from .config import Config
 from .memory.vault import Vault, iso
+from .persona import Persona
 
 INTERVAL_S = 30
 MAINTENANCE_HOUR = 3
@@ -66,11 +67,11 @@ def job_state(pid: int | None, unit: str | None) -> tuple[str, str] | None:
 
 
 class Daemon:
-    def __init__(self, vault: Vault, notify: Callable, speak: Callable, user_name: str = "",
+    def __init__(self, vault: Vault, notify: Callable, speak: Callable, persona: Persona | None = None,
                  locked: Callable[[], bool | None] = screen_locked, log_path: Path | None = None,
                  jobs: Callable = job_state):
         self.vault, self.notify, self.speak = vault, notify, speak
-        self.user_name, self.locked, self.jobs = user_name, locked, jobs
+        self.persona, self.locked, self.jobs = persona or Persona([]), locked, jobs
         self.log_path = log_path
         self.was_locked = False
 
@@ -88,10 +89,10 @@ class Daemon:
         now = now or self.vault.clock()
         events = []
         locked = bool(self.locked())
-        name = f", {self.user_name}" if self.user_name else ""
+        p = self.persona
         # due reminders
         for it in self.vault.due_reminders(now):
-            res = self._announce("AIRA reminder", it.text, f"Reminder{name}: {it.text}")
+            res = self._announce("AIRA reminder", it.text, p.reminder(it.text))
             meta = {**it.meta, "fired": iso(now), "fired_locked": locked, **({"repeat_at_unlock": True} if locked else {})}
             self.vault.update(it.id, meta=meta)
             ev = {"event": "reminder", "id": it.id, "text": it.text, "due": it.event_time, "locked": locked, **res}
@@ -102,7 +103,7 @@ class Daemon:
             for it in self.vault.by_kind("schedule"):
                 if it.meta.get("repeat_at_unlock"):
                     res = self._announce("AIRA reminder (while you were away)", it.text,
-                                         f"While you were away{name}: {it.text}")
+                                         p.reminder_again(it.text))
                     self.vault.update(it.id, meta={**it.meta, "repeat_at_unlock": False, "repeated": iso(now)})
                     ev = {"event": "reminder_repeat", "id": it.id, "text": it.text, **res}
                     self.log(**ev)
@@ -117,7 +118,7 @@ class Daemon:
             self.vault.db.execute("UPDATE jobs SET finished=?, status=?, notified=1 WHERE id=?",
                                   (iso(now), f"{st[0]}: {st[1]}", jid))
             self.vault.db.commit()
-            res = self._announce(f"AIRA: job {st[0]}", f"{label}: {st[1]}", f"{label} has {st[0]}.")
+            res = self._announce(f"AIRA: job {st[0]}", f"{label}: {st[1]}", p.job_done(label, st[0]))
             ev = {"event": "job", "id": jid, "label": label, "state": st[0], **res}
             self.log(**ev)
             events.append(ev)
@@ -131,7 +132,7 @@ class Daemon:
         return events
 
 
-def briefing(vault: Vault, now: dt.datetime, user_name: str = "") -> dict:
+def briefing(vault: Vault, now: dt.datetime, persona: Persona | None = None) -> dict:
     """Today's events, due reminders, watched jobs that finished or failed since the last briefing."""
     today = [it for it in vault.day_schedule(now.date()) if it.meta.get("type") == "event"]
     due = [it for it in vault.open_reminders(now)
@@ -140,13 +141,13 @@ def briefing(vault: Vault, now: dt.datetime, user_name: str = "") -> dict:
     jobs = vault.db.execute("SELECT label, status, finished FROM jobs WHERE finished IS NOT NULL AND finished > ? "
                             "ORDER BY finished", (since,)).fetchall()
     lines = []
-    name = f", {user_name}" if user_name else ""
-    lines.append(f"Good {'morning' if now.hour < 12 else 'afternoon' if now.hour < 18 else 'evening'}{name}.")
+    persona = persona or Persona([])
+    lines.append(persona.briefing_open(now.hour))
     if today:
         lines.append(f"Today you have {len(today)} event{'s' if len(today) != 1 else ''}: " + "; ".join(
             f"{it.text} at {it.event_time[11:16]}" for it in today) + ".")
     else:
-        lines.append("You have no events today.")
+        lines.append("Nothing on the calendar today.")
     if due:
         lines.append(f"{len(due)} reminder{'s are' if len(due) != 1 else ' is'} due today: " + "; ".join(
             f"{it.text} at {it.event_time[11:16]}" for it in due) + ".")
@@ -176,12 +177,12 @@ def main(argv: list[str] | None = None) -> int:
     vault = open_vault(cfg)
     speaker = Speaker(out_dir=cfg.data_dir / "speech")
     if args.briefing:
-        b = briefing(vault, dt.datetime.now(), cfg.user_name)
+        b = briefing(vault, dt.datetime.now(), Persona(cfg.user_names))
         print(b["text"])
         notify("AIRA briefing", b["text"])
         speaker.say(b["text"])
         return 0
-    d = Daemon(vault, notify, speaker.say, cfg.user_name, log_path=cfg.data_dir / "reminderd.log")
+    d = Daemon(vault, notify, speaker.say, Persona(cfg.user_names), log_path=cfg.data_dir / "reminderd.log")
     stop = []
     signal.signal(signal.SIGTERM, lambda *a: stop.append(1))
     d.log("start", interval=args.interval, pid=os.getpid())
