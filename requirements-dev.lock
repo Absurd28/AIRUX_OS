@@ -1,0 +1,6 @@
+# Test-only dependencies (venv at /srv/airux-work/venv). Not shipped in aira.deb.
+pytest==9.2.0
+pluggy==1.7.0
+iniconfig==2.3.1
+packaging==26.3
+Pygments==2.21.0
