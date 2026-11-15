@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 MAX_TOOLS_PER_AGENT = 8
-# Tuned after phase 6 (CLAUDE.md allows it): the Desktop agent gets a 9th tool, the browser.
+# Tuned after phase 6: the Desktop agent gets a 9th tool, the browser.
 TOOL_CAP = {"desktop": 9}
 
 
@@ -35,7 +35,7 @@ class Risk(str, enum.Enum):
     EXEC = "exec"                    # arbitrary command chosen by the model
 
 
-# CLAUDE.md: delete, overwrite, install, network changes, sending anything off the machine,
+# docs/ARCHITECTURE.md: delete, overwrite, install, network changes, sending anything off the machine,
 # and anything needing root require confirmation. Arbitrary commands too: they can do any of these.
 CONFIRM = frozenset({Risk.DELETE, Risk.OVERWRITE, Risk.INSTALL, Risk.NETWORK_CHANGE,
                      Risk.SEND_OFF, Risk.ROOT, Risk.EXEC})

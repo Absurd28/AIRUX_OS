@@ -31,7 +31,9 @@ WORK = Path(os.environ.get("AIRUX_WORK", "/srv/airux-work"))
 D = WORK / "build" / "vm"
 ISO = WORK / "build" / "iso" / "airux-0.1-amd64.hybrid.iso"
 DISK = D / "airux.qcow2"
-ACCOUNT = tomllib.loads((REPO / "tests" / "phase8_vm.toml").read_text())
+_VM_ACCOUNT = REPO / "tests" / "phase8_vm.toml"   # git-ignored; see phase8_vm.example.toml
+ACCOUNT = tomllib.loads((_VM_ACCOUNT if _VM_ACCOUNT.exists() else _VM_ACCOUNT.with_name("phase8_vm.example.toml"))
+                        .read_text())
 SAID = "How much free disk space do I have in my home folder?"
 
 

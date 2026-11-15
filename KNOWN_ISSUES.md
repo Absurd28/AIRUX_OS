@@ -5,15 +5,15 @@ The phase each issue was found in is in brackets.
 
 ## Not built or cut
 
-- **No "Hey AIRA" wake word.** Push-to-talk (Talk button or Ctrl+Space) replaces it. CLAUDE.md
-  allows push-to-talk until a wake-word model is trained. [5]
+- **No "Hey AIRA" wake word.** Push-to-talk (Talk button or Ctrl+Space) replaces it until a
+  wake-word model is trained. [5]
 - **No NVIDIA driver in the ISO.** It is CPU-only by choice: no non-free driver, and a smaller
   image. On an NVIDIA machine the model runs on the CPU with `nouveau` for display. Installing
   `nvidia-driver` afterwards and restarting `aira-llm` lets the profiler use the GPU, but this path
   is untested. [8]
 - **Only the 2B model ships in the ISO.** Bigger tiers are downloaded after the first boot
   (`aira-models`, asks first). [8]
-- Nothing from the CLAUDE.md cut list was cut: the load controller, quorum, browser control and
+- Nothing from the planned cut list was cut: the load controller, quorum, browser control and
   research checker are all built.
 
 ## Safety and privacy

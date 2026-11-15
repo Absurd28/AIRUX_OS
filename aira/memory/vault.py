@@ -1,6 +1,6 @@
 """The memory vault: one SQLCipher-encrypted SQLite file.
 
-Kinds and retention (CLAUDE.md):
+Kinds and retention (docs/ARCHITECTURE.md):
   profile   until the user changes it (never auto-evicted)
   schedule  reminders and events; until 30 days after the event (future ones never auto-evicted)
   episode   summaries of past turns; after 90 days compacted to one line

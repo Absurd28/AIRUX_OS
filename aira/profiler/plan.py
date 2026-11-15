@@ -1,6 +1,6 @@
 """Choose model tier and slot count from measured hardware.
 
-Tier rule (CLAUDE.md, with the 16-24 GB gap closed as agreed in phase 0):
+Tier rule (docs/ARCHITECTURE.md; 9B covers 8-24 GB):
   total memory = RAM + VRAM
   GPU with >= 24 GiB VRAM -> 27B
   total <  6 GiB          -> 2B
@@ -9,7 +9,7 @@ Tier rule (CLAUDE.md, with the 16-24 GB gap closed as agreed in phase 0):
 The chosen tier then steps down while its model is not downloaded or does not fit in
 free memory with the reserve, and each step is recorded as a reason.
 
-Slots (CLAUDE.md):
+Slots (docs/ARCHITECTURE.md):
   slots = (free memory - model size - 2 GiB reserve) / per-slot context memory,
   capped by CPU cores, minimum 1.
 Per-slot memory comes from the GGUF metadata: KV cache for the full-attention layers
@@ -115,7 +115,7 @@ def plan(hw: Hardware, models_dir: Path, ctx_per_slot: int = DEFAULT_CTX_PER_SLO
          max_tier: str | None = None, reasons: list[str] | None = None,
          max_slots: int | None = None) -> Plan:
     """max_tier caps the tier (used when a measured speed test forces a step down).
-    max_slots caps the slot count (tuning knob; see PROGRESS.md phase 1 measurements)."""
+    max_slots caps the slot count (tuning knob for small GPUs)."""
     catalogue = load_catalogue(models_dir)
     if not catalogue:
         raise FileNotFoundError(f"no LLM model files found in {models_dir}")

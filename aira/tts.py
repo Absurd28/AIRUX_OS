@@ -23,7 +23,7 @@ DEFAULT_VOICE = "af_heart"
 FEMALE_VOICES = {"heart": "af_heart", "bella": "af_bella", "nicole": "af_nicole", "sarah": "af_sarah",
                  "sky": "af_sky", "nova": "af_nova", "emma": "bf_emma", "isabella": "bf_isabella"}
 PIPER_VOICE = "en_US-ljspeech-medium"
-FALLBACK_BELOW_BYTES = 6 * 1024 ** 3   # CLAUDE.md: Piper female voice under 6 GB of memory
+FALLBACK_BELOW_BYTES = 6 * 1024 ** 3   # Piper female voice under 6 GB of memory
 
 
 class Speaker:
@@ -117,7 +117,7 @@ class PiperSpeaker(Speaker):
 
 def choose_speaker(total_memory: int, voice: str = DEFAULT_VOICE, out_dir: Path | None = None,
                    play: bool = True) -> Speaker:
-    """Kokoro normally; Piper under 6 GB of total memory (CLAUDE.md)."""
+    """Kokoro normally; Piper under 6 GB of total memory."""
     if total_memory < FALLBACK_BELOW_BYTES:
         return PiperSpeaker(out_dir=out_dir, play=play)
     return Speaker(voice=voice, out_dir=out_dir, play=play)

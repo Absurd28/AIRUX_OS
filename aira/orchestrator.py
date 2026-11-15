@@ -166,7 +166,7 @@ class Orchestrator:
             turn.notes.append(f"L3 uncovered topic: {topic}")
             return turn
         try:
-            # the memory voice commands from CLAUDE.md always reach the tool: small talk must never
+            # the memory voice commands (docs/ARCHITECTURE.md) always reach the tool: small talk must never
             # answer "pause memory" with a promise while memory keeps recording
             r = {"route": [{"agent": "assistant", "task": command}]} if MEMORY_COMMAND.match(command) \
                 else self.route(command)

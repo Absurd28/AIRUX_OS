@@ -1,0 +1,6 @@
+# Test account for the throwaway QEMU VM in tests/phase8_check.py.
+# Copy to tests/phase8_vm.toml (git-ignored) and choose your own password.
+full_name = "Test User"
+login = "tester"
+password = "change-me"
+hostname = "airux"

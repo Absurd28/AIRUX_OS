@@ -3,7 +3,7 @@
     python -m aira.voice             push-to-talk in the terminal (Enter starts, Enter stops)
     python -m aira.voice --file x.wav   one command from a WAV file
 
-The "Hey AIRA" wake word (openWakeWord) is not trained yet; CLAUDE.md allows push-to-talk until
+The "Hey AIRA" wake word (openWakeWord) is not trained yet; push-to-talk replaces it until
 it is. Phase 7 binds push-to-talk to a key in the AIRA shell.
 Everything runs locally: whisper-server, llama-server and the voices need no network.
 """

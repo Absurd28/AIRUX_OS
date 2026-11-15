@@ -18,3 +18,9 @@ __pycache__/
 *.log
 *.db
 *.sqlite
+
+# Private notes and local test secrets (kept on the developer's machine, not published)
+CLAUDE.md
+AIRUX_build_plan.md
+PROGRESS.md
+tests/phase8_vm.toml
