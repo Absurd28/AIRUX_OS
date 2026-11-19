@@ -1,0 +1,20 @@
+#!/bin/sh
+# Prints a comma-separated list of the user's copies of NEOX's extensions, refreshing them when the
+# neox package changes. Chromium writes the compiled ad-blocking rules into an unpacked extension's
+# own folder, so the extensions cannot be loaded straight from read-only /usr/share/neox.
+set -e
+src=/usr/share/neox
+dst="${XDG_DATA_HOME:-$HOME/.local/share}/neox/extensions"
+mkdir -p "$dst"
+list=""
+for e in "$@"; do
+    if ! cmp -s "$src/VERSION" "$dst/$e/.neox-version" 2>/dev/null; then
+        rm -rf "$dst/$e.new"
+        cp -r "$src/$e" "$dst/$e.new"
+        cp "$src/VERSION" "$dst/$e.new/.neox-version"
+        rm -rf "$dst/$e"
+        mv "$dst/$e.new" "$dst/$e"
+    fi
+    list="${list:+$list,}$dst/$e"
+done
+echo "$list"

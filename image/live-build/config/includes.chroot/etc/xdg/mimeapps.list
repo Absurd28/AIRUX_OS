@@ -1,0 +1,13 @@
+[Default Applications]
+x-scheme-handler/http=chromium.desktop
+x-scheme-handler/https=chromium.desktop
+text/html=chromium.desktop
+application/xhtml+xml=chromium.desktop
+x-scheme-handler/airox-code=airox-code-url-handler.desktop
+text/x-python=airox-code.desktop
+text/x-csrc=airox-code.desktop
+text/x-c++src=airox-code.desktop
+application/javascript=airox-code.desktop
+application/json=airox-code.desktop
+text/markdown=airox-code.desktop
+text/x-shellscript=airox-code.desktop

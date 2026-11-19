@@ -1,0 +1,9 @@
+#!/bin/sh
+set -e
+# NEOX takes over Chromium's menu entry: the taskbar, Start menu and "default browser" all point at
+# chromium.desktop, so that file now describes NEOX. Chromium's own copy is kept aside.
+if [ "$1" = install ] || [ "$1" = upgrade ]; then
+    dpkg-divert --package neox --add --rename \
+        --divert /usr/share/applications/chromium.desktop.chromium /usr/share/applications/chromium.desktop
+fi
+exit 0

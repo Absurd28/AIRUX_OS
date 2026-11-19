@@ -1,0 +1,77 @@
+
+/* ==== AIROX Code: Midnight Glass ==========================================================
+   Appended to the workbench stylesheet by scripts/build_airox.sh (product.json checksum updated).
+   Parts float as rounded cards on the window background; colours come from the colour theme,
+   so the light variant follows automatically. */
+.monaco-workbench {
+  --airox-gap: 5px;
+  --airox-radius: 12px;
+  font-family: "Inter", "Noto Sans", system-ui, sans-serif !important;
+  background: var(--vscode-titleBar-activeBackground) !important;
+}
+.monaco-workbench .part > .content,
+.monaco-workbench .part .title { font-family: inherit; }
+
+/* floating cards: the side bar, editor area, panel and secondary side bar */
+.monaco-workbench .part.sidebar,
+.monaco-workbench .part.auxiliarybar,
+.monaco-workbench .part.editor,
+.monaco-workbench .part.panel {
+  clip-path: inset(var(--airox-gap) round var(--airox-radius));
+}
+.monaco-workbench .part.editor > .content { background: var(--vscode-editor-background); }
+
+/* activity bar on top: icon pills */
+.monaco-workbench .part.sidebar .composite-bar .action-item .action-label,
+.monaco-workbench .part.activitybar .action-item .action-label { border-radius: 8px; }
+.monaco-workbench .part.activitybar .action-item.checked .action-label {
+  background: color-mix(in srgb, var(--vscode-activityBar-foreground) 14%, transparent);
+}
+
+/* tabs: slim pills with an accent underline on the active one */
+.monaco-workbench .part.editor > .content .editor-group-container > .title .tabs-container > .tab {
+  border-radius: 8px;
+  margin: 5px 2px 3px;
+  height: calc(100% - 8px) !important;
+  border-right: none !important;
+}
+.monaco-workbench .part.editor > .content .editor-group-container > .title .tabs-container > .tab.active {
+  box-shadow: inset 0 -2px 0 var(--vscode-tab-activeBorder), 0 1px 6px #0004;
+}
+.monaco-workbench .part.editor > .content .editor-group-container > .title .tabs-container > .tab .tab-label {
+  font-weight: 500;
+}
+
+/* status bar: AIRUX gradient */
+.monaco-workbench .part.statusbar {
+  background: linear-gradient(90deg, var(--vscode-statusBar-background),
+              color-mix(in srgb, var(--vscode-activityBarBadge-background) 70%, var(--vscode-statusBar-background))) !important;
+}
+
+/* command center (search box in the title bar): a rounded glass pill */
+.monaco-workbench .part.titlebar .command-center .agent-status-pill,
+.monaco-workbench .part.titlebar .command-center .action-item.command-center-center {
+  border-radius: 10px !important;
+}
+
+/* menus, dialogs, quick open, hovers and notifications: rounded glass */
+.monaco-workbench .quick-input-widget,
+.monaco-workbench .monaco-menu-container .monaco-menu,
+.monaco-workbench .notifications-toasts .notification-toast,
+.monaco-workbench .notifications-center,
+.monaco-workbench .monaco-hover,
+.monaco-workbench .suggest-widget,
+.monaco-workbench .monaco-dialog-box {
+  border-radius: var(--airox-radius) !important;
+  overflow: hidden;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 12px 40px #0008 !important;
+}
+.monaco-workbench .monaco-list .monaco-list-row { border-radius: 6px; }
+
+/* buttons and inputs */
+.monaco-workbench .monaco-button { border-radius: 8px !important; }
+.monaco-workbench .monaco-inputbox, .monaco-workbench .monaco-select-box { border-radius: 8px !important; }
+
+/* scrollbars: thin rounded */
+.monaco-workbench .monaco-scrollable-element > .scrollbar > .slider { border-radius: 6px; }

@@ -5,84 +5,275 @@
   "version": "0.1.0",
   "publisher": "airux",
   "license": "MIT",
-  "engines": { "vscode": "^1.90.0" },
-  "categories": ["AI", "Chat", "Programming Languages"],
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "AI",
+    "Chat",
+    "Programming Languages"
+  ],
   "icon": "media/aira.png",
   "main": "./extension.js",
-  "activationEvents": ["onStartupFinished"],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "contributes": {
     "viewsContainers": {
-      "activitybar": [{ "id": "aira", "title": "AIRA", "icon": "media/aira-mono.svg" }]
+      "activitybar": [
+        {
+          "id": "aira",
+          "title": "AIRA",
+          "icon": "media/aira-mono.svg"
+        }
+      ]
     },
     "views": {
-      "aira": [{ "type": "webview", "id": "aira.chat", "name": "Chat" }]
+      "aira": [
+        {
+          "type": "webview",
+          "id": "aira.chat",
+          "name": "Chat"
+        }
+      ]
     },
     "commands": [
-      { "command": "aira.ask", "title": "Ask AIRA", "category": "AIRA", "icon": "$(comment-discussion)" },
-      { "command": "aira.newChat", "title": "New Chat", "category": "AIRA", "icon": "$(add)" },
-      { "command": "aira.editWithInstruction", "title": "Edit with AIRA…", "category": "AIRA" },
-      { "command": "aira.fix", "title": "Fix", "category": "AIRA" },
-      { "command": "aira.refactor", "title": "Refactor", "category": "AIRA" },
-      { "command": "aira.document", "title": "Add Documentation", "category": "AIRA" },
-      { "command": "aira.tests", "title": "Write Tests", "category": "AIRA" },
-      { "command": "aira.explainSelection", "title": "Explain", "category": "AIRA" },
-      { "command": "aira.acceptEdit", "title": "Accept AIRA's Change", "category": "AIRA", "icon": "$(check)" },
-      { "command": "aira.rejectEdit", "title": "Reject AIRA's Change", "category": "AIRA", "icon": "$(close)" },
-      { "command": "aira.commitMessage", "title": "Write Commit Message with AIRA", "category": "AIRA", "icon": "$(sparkle)" },
-      { "command": "aira.explainTerminal", "title": "Explain with AIRA", "category": "AIRA" },
-      { "command": "aira.explainProblems", "title": "Explain Problems in This File", "category": "AIRA" },
-      { "command": "aira.toggleInline", "title": "Toggle Inline Suggestions", "category": "AIRA" }
+      {
+        "command": "aira.home",
+        "title": "Show AIRA Home",
+        "category": "AIRA",
+        "icon": "$(home)"
+      },
+      {
+        "command": "aira.ask",
+        "title": "Ask AIRA",
+        "category": "AIRA",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "aira.newChat",
+        "title": "New Chat",
+        "category": "AIRA",
+        "icon": "$(add)"
+      },
+      {
+        "command": "aira.editWithInstruction",
+        "title": "Edit with AIRA…",
+        "category": "AIRA"
+      },
+      {
+        "command": "aira.fix",
+        "title": "Fix",
+        "category": "AIRA"
+      },
+      {
+        "command": "aira.refactor",
+        "title": "Refactor",
+        "category": "AIRA"
+      },
+      {
+        "command": "aira.document",
+        "title": "Add Documentation",
+        "category": "AIRA"
+      },
+      {
+        "command": "aira.tests",
+        "title": "Write Tests",
+        "category": "AIRA"
+      },
+      {
+        "command": "aira.explainSelection",
+        "title": "Explain",
+        "category": "AIRA"
+      },
+      {
+        "command": "aira.acceptEdit",
+        "title": "Accept AIRA's Change",
+        "category": "AIRA",
+        "icon": "$(check)"
+      },
+      {
+        "command": "aira.rejectEdit",
+        "title": "Reject AIRA's Change",
+        "category": "AIRA",
+        "icon": "$(close)"
+      },
+      {
+        "command": "aira.commitMessage",
+        "title": "Write Commit Message with AIRA",
+        "category": "AIRA",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "aira.explainTerminal",
+        "title": "Explain with AIRA",
+        "category": "AIRA"
+      },
+      {
+        "command": "aira.explainProblems",
+        "title": "Explain Problems in This File",
+        "category": "AIRA"
+      },
+      {
+        "command": "aira.toggleInline",
+        "title": "Toggle Inline Suggestions",
+        "category": "AIRA"
+      }
     ],
-    "submenus": [{ "id": "aira.editor", "label": "AIRA" }],
+    "submenus": [
+      {
+        "id": "aira.editor",
+        "label": "AIRA"
+      }
+    ],
     "menus": {
-      "editor/context": [{ "submenu": "aira.editor", "group": "1_aira" }],
+      "editor/context": [
+        {
+          "submenu": "aira.editor",
+          "group": "1_aira"
+        }
+      ],
       "aira.editor": [
-        { "command": "aira.explainSelection", "group": "1@1" },
-        { "command": "aira.fix", "group": "2@1" },
-        { "command": "aira.refactor", "group": "2@2" },
-        { "command": "aira.document", "group": "2@3" },
-        { "command": "aira.tests", "group": "2@4" },
-        { "command": "aira.editWithInstruction", "group": "3@1" }
+        {
+          "command": "aira.explainSelection",
+          "group": "1@1"
+        },
+        {
+          "command": "aira.fix",
+          "group": "2@1"
+        },
+        {
+          "command": "aira.refactor",
+          "group": "2@2"
+        },
+        {
+          "command": "aira.document",
+          "group": "2@3"
+        },
+        {
+          "command": "aira.tests",
+          "group": "2@4"
+        },
+        {
+          "command": "aira.editWithInstruction",
+          "group": "3@1"
+        }
       ],
       "editor/title": [
-        { "command": "aira.acceptEdit", "when": "aira.reviewing && resourceScheme == aira-proposal", "group": "navigation@1" },
-        { "command": "aira.rejectEdit", "when": "aira.reviewing && resourceScheme == aira-proposal", "group": "navigation@2" }
+        {
+          "command": "aira.acceptEdit",
+          "when": "aira.reviewing && resourceScheme == aira-proposal",
+          "group": "navigation@1"
+        },
+        {
+          "command": "aira.rejectEdit",
+          "when": "aira.reviewing && resourceScheme == aira-proposal",
+          "group": "navigation@2"
+        }
       ],
-      "scm/title": [{ "command": "aira.commitMessage", "when": "scmProvider == git", "group": "navigation@1" }],
-      "terminal/context": [{ "command": "aira.explainTerminal", "group": "aira@1" }],
-      "view/title": [{ "command": "aira.newChat", "when": "view == aira.chat", "group": "navigation" }],
+      "scm/title": [
+        {
+          "command": "aira.commitMessage",
+          "when": "scmProvider == git",
+          "group": "navigation@1"
+        }
+      ],
+      "terminal/context": [
+        {
+          "command": "aira.explainTerminal",
+          "group": "aira@1"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "aira.newChat",
+          "when": "view == aira.chat",
+          "group": "navigation"
+        }
+      ],
       "commandPalette": [
-        { "command": "aira.acceptEdit", "when": "aira.reviewing" },
-        { "command": "aira.rejectEdit", "when": "aira.reviewing" }
+        {
+          "command": "aira.acceptEdit",
+          "when": "aira.reviewing"
+        },
+        {
+          "command": "aira.rejectEdit",
+          "when": "aira.reviewing"
+        }
       ]
     },
     "keybindings": [
-      { "command": "aira.editWithInstruction", "key": "ctrl+i", "when": "editorTextFocus && !editorReadonly" },
-      { "command": "aira.ask", "key": "ctrl+alt+i" },
-      { "command": "aira.acceptEdit", "key": "ctrl+enter", "when": "aira.reviewing" },
-      { "command": "aira.rejectEdit", "key": "escape", "when": "aira.reviewing && !suggestWidgetVisible && !findWidgetVisible && !inlineSuggestionVisible" }
+      {
+        "command": "aira.editWithInstruction",
+        "key": "ctrl+i",
+        "when": "editorTextFocus && !editorReadonly"
+      },
+      {
+        "command": "aira.ask",
+        "key": "ctrl+alt+i"
+      },
+      {
+        "command": "aira.acceptEdit",
+        "key": "ctrl+enter",
+        "when": "aira.reviewing"
+      },
+      {
+        "command": "aira.rejectEdit",
+        "key": "escape",
+        "when": "aira.reviewing && !suggestWidgetVisible && !findWidgetVisible && !inlineSuggestionVisible"
+      }
     ],
     "configuration": {
       "title": "AIRA",
       "properties": {
         "aira.serverUrl": {
-          "type": "string", "default": "http://127.0.0.1:8080",
+          "type": "string",
+          "default": "http://127.0.0.1:8080",
           "description": "AIRA's local model server (llama-server). Only addresses on this computer are accepted."
         },
         "aira.inlineSuggestions.enabled": {
-          "type": "boolean", "default": true, "description": "Show grey ghost-text suggestions as you type (Tab accepts)."
+          "type": "boolean",
+          "default": true,
+          "description": "Show grey ghost-text suggestions as you type (Tab accepts)."
         },
         "aira.inlineSuggestions.debounceMs": {
-          "type": "number", "default": 350, "minimum": 100, "description": "Pause after typing before asking for a suggestion."
+          "type": "number",
+          "default": 350,
+          "minimum": 100,
+          "description": "Pause after typing before asking for a suggestion."
         },
         "aira.context.maxChars": {
-          "type": "number", "default": 12000, "minimum": 2000, "description": "How much code AIRA reads for a chat answer."
+          "type": "number",
+          "default": 12000,
+          "minimum": 2000,
+          "description": "How much code AIRA reads for a chat answer."
         }
       }
     },
     "configurationDefaults": {
-      "workbench.colorTheme": "Default Dark Modern",
+      "workbench.colorTheme": "AIROX Midnight Glass",
+      "workbench.preferredDarkColorTheme": "AIROX Midnight Glass",
+      "workbench.preferredLightColorTheme": "AIROX Midnight Glass Light",
+      "workbench.activityBar.location": "top",
+      "workbench.startupEditor": "none",
+      "workbench.tips.enabled": false,
+      "workbench.list.smoothScrolling": true,
+      "window.commandCenter": true,
+      "window.titleBarStyle": "custom",
+      "editor.fontFamily": "'JetBrains Mono', 'Hack', 'DejaVu Sans Mono', monospace",
+      "editor.fontLigatures": true,
+      "editor.fontSize": 14,
+      "editor.lineHeight": 1.6,
+      "editor.cursorBlinking": "smooth",
+      "editor.cursorSmoothCaretAnimation": "on",
+      "editor.smoothScrolling": true,
+      "editor.bracketPairColorization.enabled": true,
+      "editor.guides.bracketPairs": "active",
+      "editor.renderLineHighlight": "all",
+      "editor.minimap.renderCharacters": false,
       "editor.inlineSuggest.enabled": true,
+      "terminal.integrated.fontFamily": "'JetBrains Mono', monospace",
+      "terminal.integrated.cursorStyle": "line",
       "telemetry.telemetryLevel": "off"
     }
   }

@@ -14,6 +14,7 @@ cd "$B"
 if [ -d config ]; then lb clean noauto >/dev/null 2>&1 || true; fi
 rm -rf auto config
 cp -a "$REPO/image/live-build/." "$B/"
+chmod 755 "$B"/config/includes.chroot/usr/lib/live/config/*   # live-config components (a Windows checkout loses +x)
 
 echo "== branding assets"
 inc="$B/config/includes.chroot"
@@ -40,7 +41,7 @@ grep -q "timeout 50" "$B/config/bootloaders/syslinux/syslinux.cfg"
 echo "== AIRA packages and AIROX Code"
 mkdir -p "$B/config/packages.chroot"
 cp "$WORK"/build/deb/aira_*_amd64.deb "$WORK"/build/deb/aira-models-base_*_all.deb \
-   "$WORK"/build/deb/airox-code_*_amd64.deb "$B/config/packages.chroot/"
+   "$WORK"/build/deb/airox-code_*_amd64.deb "$WORK"/build/deb/neox_*_all.deb "$B/config/packages.chroot/"
 
 echo "== lb config and build (logs in $B/build.log)"
 lb config

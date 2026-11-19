@@ -57,6 +57,7 @@ LD_LIBRARY_PATH="$STAGE/opt/aira/bin-whisper" "$STAGE/opt/aira/bin-whisper/whisp
 echo "== commands, services, polkit, autostart"
 install -Dm755 "$P/lib/run" "$STAGE/usr/lib/aira/run"
 install -Dm755 "$P/lib/aira-stt" "$STAGE/usr/lib/aira/aira-stt"
+install -Dm755 "$P/lib/neox-host" "$STAGE/usr/lib/aira/neox-host"
 for f in "$P"/bin/*; do install -Dm755 "$f" "$STAGE/usr/bin/$(basename "$f")"; done
 for f in "$P"/systemd/system/*.service; do install -Dm644 "$f" "$STAGE/usr/lib/systemd/system/$(basename "$f")"; done
 for f in "$P"/systemd/user/*.service; do install -Dm644 "$f" "$STAGE/usr/lib/systemd/user/$(basename "$f")"; done

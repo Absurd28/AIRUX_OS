@@ -5,6 +5,7 @@ import datetime as dt
 import json
 import os
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 
@@ -46,8 +47,26 @@ Answer with one JSON object, one of:
 Never answer questions yourself: route them, ask, or say unsupported."""
 
 CHAT = ("greeting", "thanks", "about", "smalltalk")
+
+
+def make_browser(config: Config):
+    """NEOX when AIRA runs in the desktop session and NEOX is installed (AIRA_BROWSER=neox, set by the
+    shell); otherwise a Chromium driven by Playwright (tests, headless use). Chromium starts on first use."""
+    if os.environ.get("AIRA_BROWSER") == "neox":
+        from .browser import BrowserError
+        from .neox import NeoxBridge
+        try:
+            return NeoxBridge()
+        except (BrowserError, OSError):
+            pass   # another AIRA process already drives NEOX
+    return BrowserSession(config.data_dir / "browser-profile")
 MEMORY_COMMAND = re.compile(r"^\W*(?:(?:hey |ok |okay )?aira,?\s+)?(?:please\s+)?"
                             r"(?:pause|resume|unpause|stop|start|export)\s+(?:my |your |the )?memory\b", re.I)
+# "yes" to AIRA's own "Did you mean ~/x?" (the entity check's suggestion): the user picks the path
+YES = re.compile(r"^\W*(?:yes|yeah|yep|yup|correct|right|exactly|that one|that's (?:it|right|the one))"
+                 r"(?:[\s,!.]+(?:please|that one|that's (?:it|right)|do it|go ahead|aira|boss))*\W*$", re.I)
+SUGGESTION = re.compile(r"Did you mean (\S+)\?")
+SUGGESTION_TTL = 300.0   # seconds a "Did you mean" question stays open
 
 
 @dataclass
@@ -85,10 +104,11 @@ class Orchestrator:
         self.board = PheromoneBoard(config.data_dir / "pheromones.db")
         self.pool = WorkerPool(self.board, limit=lambda: max(
             1, (os.cpu_count() or 2) * self.controller.slots // self.controller.max_slots))
-        self.browser = BrowserSession(config.data_dir / "browser-profile")  # Chromium starts on first use
+        self.browser = make_browser(config)
         self.registry = registry or build_registry(config, vault, key_source, llm=self.llm, pool=self.pool,
                                                    browser=self.browser)
         self.listeners: list = []  # the shell subscribes here: callable(event: dict)
+        self._suggestion: tuple[str, str, float] | None = None   # (command, suggested path, when)
         self.broker = Broker(self.registry, None, confirm,
                              sink=lambda e: vault.add("action", json.dumps(e, default=str), embed=False))
         self.persona = Persona(config.user_names)
@@ -141,7 +161,20 @@ class Orchestrator:
         return self.llm.chat(msgs, self.router_schema, slot=0, max_tokens=300).data or {}
 
     def handle(self, command: str) -> Turn:
-        turn = self._handle(command)
+        # a "yes" to "Did you mean ~/x?" runs the earlier request again with the path the user just
+        # confirmed. The path is the user's choice now, not a guess, and it still passes every guard layer.
+        sugg, self._suggestion = self._suggestion, None
+        base = command
+        if sugg and YES.match(command) and time.monotonic() - sugg[2] < SUGGESTION_TTL:
+            base = sugg[0]
+            turn = self._handle(f"{base} (the path is {sugg[1]})")
+            turn.notes.append(f"user confirmed the suggested path {sugg[1]}")
+            turn.command = command
+        else:
+            turn = self._handle(command)
+        hints = SUGGESTION.findall(turn.reply) if turn.kind == "ask" else []
+        if len(hints) == 1:
+            self._suggestion = (base, hints[0], time.monotonic())
         # episode memory (skipped while memory is paused)
         if not self.vault.paused and turn.kind != "error":
             first = turn.reply.strip().split("\n", 1)[0]

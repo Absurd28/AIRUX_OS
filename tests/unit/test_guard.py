@@ -85,6 +85,36 @@ def test_missing_file_is_never_acted_on(home, tmp_path):
     assert "~/report.txt" in turn.reply  # close-match suggestion, as a question
 
 
+def test_yes_to_did_you_mean_reruns_with_that_path(home, tmp_path):
+    seen = []
+
+    def routed(messages, seed, temperature):
+        seen.append(messages[-1]["content"])
+        return route("desktop", "read the report")
+    orch, llm, executed = make(home, tmp_path, [
+        route("desktop", "read ~/.report.txt"), call("read_file", path="~/.report.txt"),   # a made-up dot
+        routed, call("read_file", path="~/report.txt"), reply("It says: draft")])
+    first = orch.handle("Read report.txt in my home folder.")
+    assert first.kind == "ask" and "Did you mean ~/report.txt?" in first.reply and executed == []
+    second = orch.handle("Yes, please.")
+    assert "(the path is ~/report.txt)" in seen[0] and "Read report.txt in my home folder." in seen[0]
+    assert executed == ["read_file"] and second.command == "Yes, please." and "draft" in second.reply
+    # the question is answered: a later "yes" is just a "yes" (back to the router, no replay)
+    orch.llm.script = [{"chat": "thanks"}]
+    assert orch.handle("yes").kind == "reply" and executed == ["read_file"]
+
+
+def test_yes_without_a_question_is_not_a_replay(home, tmp_path):
+    orch, llm, executed = make(home, tmp_path, [route("desktop", "delete ~/reprt.txt"),
+                                                call("delete_path", path="~/reprt.txt"),
+                                                {"chat": "smalltalk"}])
+    orch.companion.reply = lambda text: ("Not much!", [])
+    orch.handle("Delete ~/reprt.txt")
+    orch.handle("What's up?")          # something else in between closes the question
+    orch.llm.script = [{"chat": "smalltalk"}]
+    assert orch.handle("yes").reply == "Not much!" and executed == []
+
+
 def test_tilde_name_entity_missing(home, tmp_path):
     orch, _, executed = make(home, tmp_path, [route("desktop", "list notes"), call("list_dir", path="~notes")])
     turn = orch.handle("What's in my notes?")
@@ -199,7 +229,9 @@ def test_check_reply_rules(home):
     assert guard.check_reply("It has 3 rows and 2 columns.", ev) == []          # 2 = list length
     assert guard.check_reply("~/data/results.csv has 3 rows.", ev) == []
     assert guard.check_reply("4.4 GiB free", ev) == []                         # rounding allowed
-    assert "number 4 is not in the tool results" in guard.check_reply("It has 4 rows.", ev)
+    # (not "4 rows": pytest's temporary home, e.g. /tmp/pytest-of-x/pytest-4/..., is in the evidence)
+    assert "number 7919 is not in the tool results" in guard.check_reply("It has 7919 rows.", ev)
+    assert not guard._num_supported("4", [4.36], measured=False)                # counts are never rounded
     assert any("GiB, not GB" in p for p in guard.check_reply("4.36 GB free", ev))
     assert any("name other.csv" in p for p in guard.check_reply("See other.csv", ev))
     assert any("path ~/data/x" in p for p in guard.check_reply("Saved to ~/data/x", ev))

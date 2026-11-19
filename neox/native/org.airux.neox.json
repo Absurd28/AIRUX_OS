@@ -1,0 +1,7 @@
+{
+  "name": "org.airux.neox",
+  "description": "AIRA in NEOX: relays between the NEOX extension and AIRA on this computer",
+  "path": "/usr/lib/aira/neox-host",
+  "type": "stdio",
+  "allowed_origins": ["chrome-extension://caeflmcomdjlfjeinfhpookmojmhiphd/"]
+}

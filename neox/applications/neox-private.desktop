@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Name=NEOX Private (Tor)
+Comment=A private NEOX window that browses through Tor
+Exec=/usr/bin/neox-private
+Icon=neox
+Terminal=false
+Type=Application
+StartupWMClass=neox-tor
+Categories=Network;WebBrowser;
+Keywords=tor;private;anonymous;neox;

@@ -1,0 +1,55 @@
+#!/bin/sh
+
+. /usr/lib/live/config.sh
+
+# AIRUX live session only: no automatic screen lock (and no screen blanking on mains power). The live user has no password anyone knows, so
+# Plasma's 5-minute lock locked people out of the live system (and blocked AIRA's Ctrl+Space).
+# Installed systems keep Plasma's normal lock; this component runs only when booted live.
+
+Cmdline ()
+{
+	for _PARAMETER in ${LIVE_CONFIG_CMDLINE}
+	do
+		case "${_PARAMETER}" in
+			live-config.username=*|username=*)
+				LIVE_USERNAME="${_PARAMETER#*username=}"
+				;;
+		esac
+	done
+}
+
+Init ()
+{
+	if component_was_executed "airux-nolock"
+	then
+		exit 0
+	fi
+	echo -n " airux-nolock"
+}
+
+Config ()
+{
+	_DIR="/home/${LIVE_USERNAME}/.config"
+	mkdir -p "${_DIR}"
+	cat > "${_DIR}/kscreenlockerrc" << EOF
+[Daemon]
+Autolock=false
+LockOnResume=false
+EOF
+	# on mains power the live screen stays on and the machine does not suspend mid-session
+	cat > "${_DIR}/powerdevilrc" << EOF
+[AC][Display]
+DimDisplayWhenIdle=false
+TurnOffDisplayWhenIdle=false
+
+[AC][SuspendAndShutdown]
+AutoSuspendAction=0
+EOF
+	chown -R "${LIVE_USERNAME}:${LIVE_USERNAME}" "${_DIR}"
+
+	touch /var/lib/live/config/airux-nolock
+}
+
+Cmdline
+Init
+Config

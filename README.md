@@ -58,8 +58,9 @@ prompts:
 | 🔬 **Research tools** | Search local notes and papers, summarise PDFs with citations, inspect datasets, run Jupyter notebooks, and search arXiv and the web (with your OK). |
 | 🐝 **Worker swarm** | Async workers for file search and fetching, a "pheromone board" that learns which approach works, and a load controller that adds or sheds agents with system pressure. |
 | 🪟 **Windows 11-style desktop** | KDE Plasma 6 laid out like Windows 11: a centred taskbar with a Start button, pinned apps and search, a File Explorer (Dolphin), a full Settings app (Wi-Fi, Bluetooth, display, sound, power, apps) and the shortcuts you know (Win, Win+E, Win+I, Win+D, Win+L, Win+arrows). |
-| 🖥️ **AIRA side panel** | AIRA docks on the right like Copilot: live transcript, active agents, pending confirmations and verified/unverified tags. Ctrl+Space talks to her from anywhere, and **AIRA Settings** covers voice, names, memory and privacy. Chromium is controlled through Playwright. |
-| 💻 **AIROX Code** | The AIRUX code editor: VSCodium (the open-source build of VS Code) with AIRA built in, like Copilot. It offers chat with cited sources, inline suggestions, edits applied only after review, commit messages and error explanations, all on the local model. |
+| 🖥️ **AIRA side panel** | AIRA docks on the right like Copilot: live transcript, active agents, pending confirmations and verified/unverified tags. Ctrl+Space talks to her from anywhere, and **AIRA Settings** covers voice, names, memory and privacy. |
+| 💻 **AIROX Code** | The AIRUX code editor: VSCodium (the open-source build of VS Code) with AIRA built in, like Copilot, and a look of its own (*Midnight Glass*: floating rounded panels, pill tabs, a top activity bar and an **AIRA Home** start page). It offers chat with cited sources, inline suggestions, edits applied only after review, commit messages and error explanations, all on the local model. |
+| 🌐 **NEOX browser** | The AIRUX browser, built on Chromium's engine with Brave-style protection: **Shields** (uBlock Origin Lite), strict privacy defaults (HTTPS-only, third-party cookies blocked, no telemetry, DuckDuckGo), **Global Privacy Control**, fingerprinting protection, and a **private window with Tor**. AIRA browses in it: say *"open the browser and search for X"*, or ask about the page you're reading in NEOX's AIRA side panel, where answers must quote the page. |
 | 💿 **Real OS image** | A live ISO with AIRUX branding, a Plymouth splash and the Calamares installer. It is tested end to end in QEMU: boot, install, then AIRA answering by voice. |
 
 ## 📸 Screenshots
@@ -71,6 +72,8 @@ prompts:
 | <img src="docs/screenshots/desktop-1-desktop.png" width="420"/> | <img src="docs/screenshots/desktop-2-start-menu.png" width="420"/> |
 | **File Explorer** | **AIROX Code** |
 | <img src="docs/screenshots/desktop-3-files.png" width="420"/> | <img src="docs/screenshots/desktop-5-airox-code.png" width="420"/> |
+| **NEOX with AIRA's side panel** | **AIRA searching in NEOX** |
+| <img src="docs/screenshots/neox-sidepanel.png" width="420"/> | <img src="docs/screenshots/desktop-8-aira-in-neox.png" width="420"/> |
 | **Settings** | **AIRA Settings** |
 | <img src="docs/screenshots/desktop-4-settings.png" width="420"/> | <img src="docs/screenshots/desktop-6-aira-settings.png" width="420"/> |
 | **Installer finished** | **Installed system** |
@@ -299,7 +302,8 @@ aira/            AIRA: orchestrator, agents, grounding guard, permission broker
   profiler/      hardware probe, tier and slot planning, server launch
   swarm/         worker pool, pheromone board, quorum, load controller
   shell/         AIRA side panel and AIRA Settings (HTTP + SSE, Chromium)
-airox-code/      AIROX Code: the AIRA extension (chat, inline, reviewed edits) and branding
+airox-code/      AIROX Code: the AIRA extension (chat, inline, reviewed edits, AIRA Home), Midnight Glass theme
+neox/            NEOX browser: extension (AIRA bridge, side panel, new tab, privacy), launchers, policies
 image/           live-build configuration for the AIRUX ISO
 packaging/       systemd units, polkit rule, branding, Debian packaging
 scripts/         build llama.cpp / whisper.cpp, fetch models, build .deb and ISO, QEMU control
@@ -318,7 +322,8 @@ docs/            architecture, USB guide, demo, evaluation reports
 - [x] Bootable, installable ISO tested in QEMU
 - [x] 200-command evaluation
 - [x] Windows 11-style Plasma desktop with AIRA docked like Copilot
-- [x] AIROX Code: a VS Code-based editor with AIRA built in
+- [x] AIROX Code: a VS Code-based editor with AIRA built in, with its own Midnight Glass look
+- [x] NEOX: a Chromium-based private browser with Shields, Tor windows and AIRA built in
 - [ ] Real-hardware validation across more laptops
 - [ ] "Hey AIRA" wake word (openWakeWord)
 - [ ] Optional NVIDIA driver in the image

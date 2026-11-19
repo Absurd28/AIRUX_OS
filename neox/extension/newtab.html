@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>New tab</title>
+<link rel="stylesheet" href="newtab.css">
+</head>
+<body>
+<div class="glow g1"></div><div class="glow g2"></div>
+<main>
+  <div class="brand"><img src="icons/neox-128.png" alt=""><span>NEOX</span></div>
+  <div class="clock"><span id="time">--:--</span><small id="hello"></small></div>
+  <form id="search" action="https://duckduckgo.com/" method="get">
+    <span class="lens">⌕</span>
+    <input name="q" id="q" placeholder="Search privately or type an address" autocomplete="off" autofocus>
+  </form>
+  <form id="ask"><span class="spark">✦</span><input id="a" placeholder="Ask AIRA: “find me Debian 13 release notes”…" autocomplete="off"><button>Ask AIRA</button></form>
+  <div id="sites" class="sites"></div>
+  <div class="shields">
+    <span>🛡️ Shields: ads and trackers blocked</span>
+    <span>🔒 HTTPS-only</span>
+    <span>🍪 Third-party cookies blocked</span>
+    <span>🫥 Fingerprinting protection</span>
+    <span>✋ Global Privacy Control</span>
+    <span id="aira-state">🤖 AIRA …</span>
+  </div>
+</main>
+<script src="newtab.js"></script>
+</body>
+</html>

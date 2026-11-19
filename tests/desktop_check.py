@@ -9,11 +9,15 @@ Pass requires every line below; screenshots go to $AIRUX_WORK/build/vm/desktop-*
   aira_panel  AIRA's window is docked on the right edge, full height
   ptt         Ctrl+Space anywhere starts AIRA's microphone recording, pressing again stops it
   services    NetworkManager, bluetooth, power-profiles-daemon, upower, udisks2
-  apps        Files (Dolphin), System Settings, AIROX Code and AIRA Settings open a window
+  apps        Files, System Settings, AIROX Code, AIRA Settings and NEOX open a window
+  airox_look  AIROX Code has its Midnight Glass stylesheet (checksums intact) and opens on AIRA Home
+  aira_in_neox  a command to AIRA searches the web in a NEOX window
+  tor         Tor is off at boot; a NEOX private window starts it and opens through it
 """
 from __future__ import annotations
 
 import re
+import shlex
 import sys
 import time
 from pathlib import Path
@@ -40,7 +44,7 @@ def session_env() -> str:
 
 
 def as_user(env: str, cmd: str, timeout: float = 60) -> dict:
-    return sh(f"runuser -u {USER} -- env {env} sh -c {repr(cmd)}", timeout=timeout)
+    return sh(f"runuser -u {USER} -- env {env} sh -c {shlex.quote(cmd)}", timeout=timeout)
 
 
 LISTWIN_JS = """workspace.windowList().forEach(function (w) {
@@ -49,20 +53,45 @@ LISTWIN_JS = """workspace.windowList().forEach(function (w) {
 });"""
 
 
+APPROVE_PY = """import json, sys, urllib.request
+port, token = sys.argv[1], sys.argv[2]
+base = f"http://127.0.0.1:{port}"
+for line in urllib.request.urlopen(f"{base}/events?token={token}"):
+    if not line.startswith(b"data: "):
+        continue
+    ev = json.loads(line[6:])
+    if ev.get("event") == "confirm" and ev.get("tool") in ("browser", "web_search"):
+        req = urllib.request.Request(f"{base}/confirm", json.dumps({"id": ev["id"], "yes": True}).encode(),
+                                     {"X-AIRA-Token": token, "Content-Type": "application/json"})
+        print("approved", ev["args"], urllib.request.urlopen(req).read(), flush=True)"""
+
+
+def kwin_script(env: str, js: str) -> None:
+    """Run a one-shot KWin script in the live user's session."""
+    sh("cat > /tmp/kwinone.js <<'JS'\n" + js + "\nJS\nchmod 644 /tmp/kwinone.js")
+    sh("""cat > /tmp/kwinone.sh <<'SH'
+#!/bin/sh
+id=$(qdbus6 org.kde.KWin /Scripting org.kde.kwin.Scripting.loadScript /tmp/kwinone.js airux-oneshot)
+qdbus6 org.kde.KWin /Scripting/Script$id org.kde.kwin.Script.run >/dev/null
+sleep 1
+qdbus6 org.kde.KWin /Scripting org.kde.kwin.Scripting.unloadScript airux-oneshot >/dev/null
+SH
+chmod 755 /tmp/kwinone.sh""")
+    as_user(env, "/tmp/kwinone.sh")
+
+
+def close_windows(env: str, keep: str = r"^AIRA$") -> None:
+    """Close every normal window except AIRA's panel, as the user would with the close button."""
+    kwin_script(env, "var keep = new RegExp(" + repr(keep) + ");\nworkspace.windowList().forEach(function (w) {\n"
+                     "  if (w.normalWindow && w.caption && !keep.test(w.caption)) w.closeWindow();\n});")
+    time.sleep(5)
+
+
 def windows(env: str) -> list[tuple[str, int, int, int, int, str]]:
     """(title, x, y, width, height, class) of normal windows, asked from KWin itself (works on Wayland
     and X11): a one-shot KWin script prints them to the session journal."""
     token = f"AIRAWIN{int(time.time() * 1000)}"
-    sh("cat > /tmp/listwin.js <<'JS'\n" + LISTWIN_JS.replace("TOKEN", token) + "\nJS\nchmod 644 /tmp/listwin.js")
-    sh("""cat > /tmp/listwin.sh <<'SH'
-#!/bin/sh
-id=$(qdbus6 org.kde.KWin /Scripting org.kde.kwin.Scripting.loadScript /tmp/listwin.js airux-listwin)
-qdbus6 org.kde.KWin /Scripting/Script$id org.kde.kwin.Script.run >/dev/null
-sleep 1
-qdbus6 org.kde.KWin /Scripting org.kde.kwin.Scripting.unloadScript airux-listwin >/dev/null
-SH
-chmod 755 /tmp/listwin.sh""")
-    as_user(env, "/tmp/listwin.sh")
+    kwin_script(env, LISTWIN_JS.replace("TOKEN", token))
     out = as_user(env, f"journalctl --user -b --no-pager -o cat | grep '{token}|'")["out"]
     wins = []
     for line in out.splitlines():
@@ -168,7 +197,8 @@ def main() -> int:
     time.sleep(2)
 
     apps = {"Files": ("dolphin", r"Dolphin"), "Settings": ("systemsettings", r"System Settings"),
-            "AIROX Code": ("airox-code --new-window", r"AIROX Code"), "AIRA Settings": ("aira-settings", r"^AIRA Settings$")}
+            "AIROX Code": ("airox-code --new-window", r"AIRA Home|AIROX Code"),
+            "AIRA Settings": ("aira-settings", r"^AIRA Settings$"), "NEOX": ("neox", r"New tab")}
     opened = {}
     for i, (name, (cmd, pat)) in enumerate(apps.items(), 3):
         as_user(env, f"setsid {cmd} >/dev/null 2>&1 &")
@@ -182,6 +212,52 @@ def main() -> int:
     ver = as_user(env, "airox-code --version | head -1")["out"].strip()
     print(f"airox-code --version: {ver}")
     r["apps"] = all(opened.values()) and bool(ver)
+
+    # AIROX Code's own look: the Midnight Glass stylesheet is in, every checksum still matches, and it
+    # opened on AIRA Home
+    look = sh("""python3 - <<'PY'
+import base64, hashlib, json
+app = "/usr/share/airox-code/resources/app"
+p = json.load(open(app + "/product.json"))
+d = lambda rel: base64.b64encode(hashlib.sha256(open(f"{app}/out/{rel}", "rb").read()).digest()).decode().rstrip("=")
+css = open(app + "/out/vs/workbench/workbench.desktop.main.css").read()
+print("styled" if "AIROX Code: Midnight Glass" in css else "plain", "checksums-ok" if all(d(k) == v for k, v in p["checksums"].items()) else "checksums-BAD")
+PY""")["out"].strip()
+    home = [w for w in windows(env) if "AIRA Home" in w[0]]
+    print(f"AIROX Code look: {look}; AIRA Home open: {bool(home)}")
+    r["airox_look"] = look == "styled checksums-ok" and bool(home)
+
+    # AIRA browses in NEOX: a typed command to AIRA, and the search appears in a NEOX window. The apps
+    # opened above are closed first (the 5 GB VM has no room for them and the model), so AIRA also
+    # has to start NEOX itself.
+    close_windows(env)
+    print(f"windows left open: {windows(env)}")
+    tok = as_user(env, "cat $HOME/.local/state/aira/shell.token")["out"].split()
+    if len(tok) == 2:
+        # opening a web page sends data off the machine, so AIRA asks first: answer "Yes" to its
+        # browser confirmations as the user would click it in the panel (nothing else is approved)
+        sh("cat > /tmp/approve.py <<'PY'\n" + APPROVE_PY + "\nPY\nchmod 644 /tmp/approve.py")
+        as_user(env, f"setsid timeout 480 python3 /tmp/approve.py {tok[0]} {tok[1]} >/tmp/approve.log 2>&1 &")
+        as_user(env, f"curl -s -m 10 -X POST -H 'X-AIRA-Token: {tok[1]}' -H 'Content-Type: application/json' "
+                     f"-d '{{\"text\": \"Open the browser and search for debian trixie release notes\"}}' "
+                     f"http://127.0.0.1:{tok[0]}/command")
+    found = wait_window(env, r"(?i)trixie", 450)
+    print(f"AIRA's search in NEOX: {found}")
+    r["aira_in_neox"] = bool(found) and found[5] == "neox"   # NEOX's window (its --class), not AIRA's own panel
+    time.sleep(3)
+    vm.shot(D, D / "desktop-8-aira-in-neox.png")
+
+    # private window with Tor: Tor is off until asked for, then the window goes through it
+    close_windows(env)
+    before = sh("systemctl is-enabled tor.service; systemctl is-active tor.service")["out"].split()
+    # started the way the Start menu starts apps (in the user's systemd manager, so polkit sees the
+    # desktop session); a process from outside the session is refused, as it should be
+    as_user(env, "systemd-run --user --collect neox-private")
+    tor_win = wait_window(env, r"(?i)tor", 180)
+    after = sh("systemctl is-active tor.service")["out"].strip()
+    print(f"Tor before: {before}; after opening a private window: {after}; window: {tor_win}")
+    r["tor"] = before[:1] == ["disabled"] and after == "active" and bool(tor_win)
+    vm.shot(D, D / "desktop-9-neox-tor.png")
 
     print("\n=== desktop check:", "PASS" if all(r.values()) else "FAIL", r)
     return 0 if all(r.values()) else 1

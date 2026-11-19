@@ -62,7 +62,33 @@ rm -rf "$dest"
 mkdir -p "$dest"
 cp -a "$EXT/package.json" "$EXT/extension.js" "$EXT/src" "$EXT/media" "$dest/"
 rsvg-convert -w 128 -h 128 "$REPO/packaging/branding/aira-icon.svg" -o "$dest/media/aira.png"
+cp "$REPO/airox-code/branding/airox-code.svg" "$dest/media/airox-code.svg"
 cp "$REPO/LICENSE" "$dest/LICENSE"
+
+echo "== AIROX Midnight Glass: colour themes and the workbench stylesheet"
+themes="$APP/resources/app/extensions/airox-themes"
+rm -rf "$themes"
+cp -a "$REPO/airox-code/extension/airox-themes" "$themes"
+cp "$REPO/LICENSE" "$themes/LICENSE"
+python3 - "$APP/resources/app" "$REPO/airox-code/branding/midnight-glass.css" <<'PY'
+# Append the AIROX stylesheet to the workbench CSS and update its checksum in product.json, so
+# AIROX Code does not report a corrupt installation. Every other checksummed file must be untouched.
+import base64, hashlib, json, sys
+app, extra = sys.argv[1], sys.argv[2]
+product = json.load(open(app + "/product.json"))
+sums = product["checksums"]
+def digest(rel):
+    return base64.b64encode(hashlib.sha256(open(f"{app}/out/{rel}", "rb").read()).digest()).decode().rstrip("=")
+css = "vs/workbench/workbench.desktop.main.css"
+assert digest(css) == sums[css], "the workbench stylesheet is not the one VSCodium shipped"
+with open(f"{app}/out/{css}", "ab") as f:
+    f.write(open(extra, "rb").read())
+sums[css] = digest(css)
+json.dump(product, open(app + "/product.json", "w"), indent="\t")
+bad = [rel for rel in sums if digest(rel) != sums[rel]]
+assert not bad, f"checksum mismatch: {bad}"
+print(f"stylesheet patched; all {len(sums)} checksums verified")
+PY
 
 echo "== icons, launcher, desktop entries"
 for s in 16 32 48 64 128 256 512; do
@@ -127,7 +153,7 @@ Priority: optional
 Architecture: amd64
 Maintainer: AIRUX <airux@localhost>
 Depends: $depends
-Recommends: aira, git
+Recommends: aira, git, fonts-jetbrains-mono, fonts-inter
 Installed-Size: $(du -sk "$STAGE" --exclude=DEBIAN | cut -f1)
 Homepage: https://github.com/Absurd28/AIRUX_OS
 Description: AIROX Code, the code editor of AIRUX, with AIRA built in

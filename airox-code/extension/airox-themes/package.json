@@ -1,0 +1,16 @@
+{
+  "name": "airox-themes",
+  "displayName": "AIROX Midnight Glass",
+  "description": "AIROX Code's own look: deep navy glass with AIRUX cyan and green accents, in dark and light.",
+  "version": "0.1.0",
+  "publisher": "airux",
+  "license": "MIT",
+  "engines": { "vscode": "^1.90.0" },
+  "categories": ["Themes"],
+  "contributes": {
+    "themes": [
+      { "label": "AIROX Midnight Glass", "uiTheme": "vs-dark", "path": "./themes/midnight-glass.json" },
+      { "label": "AIROX Midnight Glass Light", "uiTheme": "vs", "path": "./themes/midnight-glass-light.json" }
+    ]
+  }
+}

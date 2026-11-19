@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AIRA</title>
+<link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+<header>
+  <img src="icons/aira-32.png" alt="">
+  <div><b>AIRA</b><span>in NEOX</span></div>
+  <span id="status" class="pill">connecting…</span>
+</header>
+<nav>
+  <button id="tab-page" class="on">This page</button>
+  <button id="tab-aira">Ask AIRA</button>
+</nav>
+<section id="page" class="on">
+  <div class="quick">
+    <button data-q="Summarize this page in 5 short bullet points.">✨ Summarize</button>
+    <button data-q="What are the key facts and numbers on this page?">🔢 Key facts</button>
+    <button data-q="Is there anything on this page I should be careful about (scams, misleading claims, hidden costs)?">🛡️ Check it</button>
+  </div>
+  <div id="page-log" class="log"></div>
+  <form id="page-form"><textarea id="page-q" rows="2" placeholder="Ask about this page…"></textarea><button>Ask</button></form>
+  <p class="note">AIRA answers only from this page's text and quotes it; quotes she can't find on the page are flagged.</p>
+</section>
+<section id="aira">
+  <div id="aira-log" class="log"></div>
+  <form id="aira-form"><textarea id="aira-q" rows="2" placeholder="e.g. Search for Debian 13 release notes and open the first result"></textarea><button>Send</button></form>
+  <p class="note">Commands go to AIRA's agents. She browses here in NEOX, and asks before anything risky.</p>
+</section>
+<script src="sidepanel.js"></script>
+</body>
+</html>

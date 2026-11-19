@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "NEOX",
+  "short_name": "NEOX",
+  "version": "0.1.0",
+  "description": "NEOX: the AIRUX browser. New tab, Global Privacy Control, fingerprinting protection, and AIRA built in.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAor6YQe2j/5UEvMXFRAD7WJ0ZWv1/4QVv2ANLGosQEGhebBhTEfbdALQATixL8MzRgs6XWuF1ozrYC9C81HpKWF7cIYSJPb16QuLk6VrUQaKoajMxPtuw4VvqgcEG7oWb5KxeifT5p/8YWOgHa4vwmHRlJlCQNkrREQzDkYw9CLW+shzCVpWv9MB/s3NFEcxONMTUP3ieCAcUDbBKD9dREXGL4yhG8Ob9JSNtWL6IisTQC4R+K263SlKWP0d5lO5uXqtOTtXzL8SRlaaeZ+U9cRY8SyG+jcRca0EivRpgyA1JKLt2ou3bjunHjBOnVMrrjiBB5ZLL2xiRBhQoeo+QEwIDAQAB",
+  "icons": { "16": "icons/neox-16.png", "32": "icons/neox-32.png", "48": "icons/neox-48.png", "128": "icons/neox-128.png" },
+  "permissions": ["tabs", "scripting", "sidePanel", "storage", "nativeMessaging", "declarativeNetRequest", "topSites"],
+  "host_permissions": ["<all_urls>"],
+  "background": { "service_worker": "background.js" },
+  "chrome_url_overrides": { "newtab": "newtab.html" },
+  "side_panel": { "default_path": "sidepanel.html" },
+  "action": { "default_title": "Ask AIRA about this page", "default_icon": { "16": "icons/aira-16.png", "32": "icons/aira-32.png" } },
+  "commands": {
+    "_execute_action": { "suggested_key": { "default": "Ctrl+Shift+A" }, "description": "Open AIRA" }
+  },
+  "declarative_net_request": {
+    "rule_resources": [{ "id": "gpc", "enabled": true, "path": "rules/gpc.json" }]
+  },
+  "content_scripts": [{
+    "matches": ["http://*/*", "https://*/*"],
+    "js": ["content/privacy-main.js"],
+    "run_at": "document_start",
+    "all_frames": true,
+    "match_about_blank": true,
+    "world": "MAIN"
+  }],
+  "minimum_chrome_version": "120"
+}

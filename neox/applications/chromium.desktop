@@ -1,0 +1,23 @@
+[Desktop Entry]
+Version=1.0
+Name=NEOX
+GenericName=Web Browser
+Comment=Private, fast web browser with AIRA built in
+Exec=/usr/bin/neox %U
+Icon=neox
+Terminal=false
+Type=Application
+StartupNotify=true
+StartupWMClass=neox
+Categories=Network;WebBrowser;
+MimeType=text/html;text/xml;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;application/pdf;
+Keywords=browser;web;internet;neox;private;
+Actions=new-window;private-tor;
+
+[Desktop Action new-window]
+Name=New Window
+Exec=/usr/bin/neox --new-window
+
+[Desktop Action private-tor]
+Name=New Private Window with Tor
+Exec=/usr/bin/neox-private

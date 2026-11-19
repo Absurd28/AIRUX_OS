@@ -8,6 +8,7 @@ const llm = require("./src/llm");
 const prompts = require("./src/prompts");
 const grounding = require("./src/grounding");
 const textops = require("./src/textops");
+const home = require("./src/home");
 
 const cfg = () => vscode.workspace.getConfiguration("aira");
 const serverUrl = () => cfg().get("serverUrl", "http://127.0.0.1:8080");
@@ -361,6 +362,26 @@ function activate(ctx) {
     const ed = vscode.window.activeTextEditor;
     if (ed && !ed.selection.isEmpty) chat.ask("Explain this code.");
   });
+  const showHome = async () => home.show(ctx, { modelUp: await llm.health(serverUrl()),
+                                                onAsk: async (q) => { await chat.reveal(); chat.ask(q); } });
+  reg("aira.home", showHome);
+  // AIRA Home replaces VS Code's Welcome page. This extension starts after the workbench has
+  // restored (onStartupFinished), when the Welcome tab may already be open, or may open a moment
+  // later: for the first seconds, a Welcome tab is closed and AIRA Home shown in its place. Files
+  // the user opened are left alone.
+  const isWelcome = (t) => !(t.input instanceof vscode.TabInputText) && /^(Welcome|Walkthrough\b)/.test(t.label);
+  const replaceWelcome = () => {
+    const tabs = vscode.window.tabGroups.all.flatMap((g) => g.tabs);
+    const welcome = tabs.filter(isWelcome);
+    if (tabs.length && welcome.length < tabs.length) return false;   // the user has files open
+    if (welcome.length) vscode.window.tabGroups.close(welcome);
+    showHome();
+    return true;
+  };
+  replaceWelcome();
+  const watch = vscode.window.tabGroups.onDidChangeTabs((e) => { if (e.opened.some(isWelcome)) replaceWelcome(); });
+  const stopWatch = setTimeout(() => watch.dispose(), 20000);
+  ctx.subscriptions.push(watch, { dispose: () => clearTimeout(stopWatch) });
   reg("aira.newChat", () => chat.newChat());
   reg("aira.explainSelection", async () => { await chat.reveal(); chat.ask("Explain the selected code."); });
   reg("aira.fix", () => proposeEdit(proposals, "fix"));
@@ -381,7 +402,7 @@ function activate(ctx) {
     await cfg().update("inlineSuggestions.enabled", on, vscode.ConfigurationTarget.Global);
     status.text = on ? "$(sparkle) AIRA" : "$(sparkle) AIRA (off)";
   });
-  return { chat, proposals, inline, answer, proposeEdit, acceptEdit, rejectEdit, commitMessage };   // for the integration tests
+  return { chat, proposals, inline, showHome, answer, proposeEdit, acceptEdit, rejectEdit, commitMessage };   // for the integration tests
 }
 
 function deactivate() {}

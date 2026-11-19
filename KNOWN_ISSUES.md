@@ -37,6 +37,9 @@ The phase each issue was found in is in brackets.
 - **Results vary between runs.** Risky calls are sampled three times at temperature 0.7 (layer
   5), so the same command can pass in one run and miss in the next. Phase 5 passed 8/10, then
   10/10 on the same code. [9]
+- **The 2B model sometimes misspells a path** (it once wrote `~/.demo.txt` for "demo.txt in my home
+  folder"). The entity check (layer 2) stops it and asks "Did you mean ~/demo.txt?"; answering
+  "yes" runs the request again with that path, through every check. [9]
 - **Small talk can offer things that do not apply.** For example, it offered a GPU check on a VM
   with no GPU. The reply checker stops invented facts and "done" claims, not irrelevant offers.
   [8, 9]
@@ -56,8 +59,35 @@ The phase each issue was found in is in brackets.
   open-vsx.org.
 - **AIRA in AIROX Code runs on the same local model as AIRA.** Inline suggestions take about 2 s
   on the 9B model with a GPU, and longer on the CPU-only 2B tier.
-- **Untested on real hardware so far:** the Plasma desktop, AIROX Code and the fixed audio stack.
-  The last real-laptop test (with Xfce) failed; see docs/DEMO.md.
+- **The live session never locks or blanks the screen** (on mains power). The live user's password
+  is not known to anyone, so Plasma's 5-minute lock locked people out of the live system (and
+  blocked Ctrl+Space). Installed systems keep the normal lock.
+- **AIRA Home replaces the Welcome page** a moment after AIROX Code starts (the AIRA extension
+  starts after the window has opened), so Welcome can flash briefly.
+- **Untested on real hardware so far:** the Plasma desktop, AIROX Code, NEOX and the fixed audio
+  stack. The last real-laptop test (with Xfce) failed; see docs/DEMO.md.
+
+## NEOX browser
+
+- **NEOX is Chromium with AIRUX's layer, not a fork.** It is Debian's Chromium package with NEOX's
+  own profile, extensions and policies, so some of Chromium's own screens and window titles still
+  say "Chromium" (for example "New tab - Chromium").
+- **Shields is uBlock Origin Lite (Manifest V3).** Debian's full uBlock Origin is a Manifest V2
+  extension that Chromium 156 no longer loads. Lite blocks by filter lists only: no element
+  picker and no custom dynamic filtering.
+- **Safe Browsing is off** (it sends lookups to Google). NEOX relies on HTTPS-only mode and Shields.
+- **Fingerprinting protection is partial:** canvas and audio readings get a small per-site, per-day
+  noise, `navigator.hardwareConcurrency` reads 4, and Global Privacy Control is sent. WebGL, fonts
+  and screen size are not changed, unlike Brave.
+- **Saved passwords use Chromium's "basic" store** (not KDE Wallet): with the wallet, Chromium
+  popped up "KDE Wallet Service" at start and held back every page until it was answered. The
+  basic store is obfuscated, not encrypted.
+- **The Tor window is not Tor Browser.** It sends traffic through Tor and leaves no profile behind,
+  but it does not have Tor Browser's anti-fingerprinting. Tor starts only when a private window is
+  opened (it is off at boot), and starting it needs the desktop session (the `aira` group's polkit
+  rule above).
+- **AIRA asks before opening web pages** (sending anything off the machine needs your OK), so
+  "open the browser and search for X" shows a confirmation in AIRA's panel first.
 
 ## Installer and image
 

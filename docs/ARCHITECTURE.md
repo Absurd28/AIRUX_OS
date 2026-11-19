@@ -171,8 +171,27 @@ These hallucination controls are implemented in code, not only in prompts.
     back;
   - commit messages, and explanations of terminal errors and problems.
 
-  It talks only to the model on this computer.
-- **Browser control:** Chromium driven through Playwright.
+  It talks only to the model on this computer. Its look is AIROX's own ("Midnight Glass": a theme
+  plus a stylesheet appended to the workbench, with product.json's checksums updated), and it opens
+  on **AIRA Home** instead of VS Code's Welcome page.
+- **NEOX browser:** Debian's Chromium started with NEOX's own profile, two extensions and managed
+  policies (HTTPS-only, third-party cookies blocked, no telemetry or Safe Browsing lookups,
+  DuckDuckGo):
+  - **Shields:** uBlock Origin Lite (Manifest V3).
+  - **NEOX extension:** new tab page, Global Privacy Control, canvas and audio farbling, AIRA's
+    side panel, and the bridge to AIRA.
+  - **Private window with Tor:** `neox-private` starts `tor.service` on demand (polkit) and opens a
+    throwaway profile through its SOCKS proxy.
+- **Browser control:** in the desktop session AIRA browses in NEOX:
+
+  ```text
+  AIRA's agents -> NeoxBridge (Unix socket, 0600) -> native host org.airux.neox -> NEOX extension -> tab
+  ```
+
+  Each command (open, search, read, click, back) returns what the page now shows, for read-back.
+  Questions in NEOX's side panel go the other way and are answered only from the page's text; every
+  quote is checked against the page, and answers that quote nothing are tagged unverified. Outside
+  the desktop (tests, no NEOX), AIRA falls back to Chromium driven through Playwright.
 
 ## Image
 

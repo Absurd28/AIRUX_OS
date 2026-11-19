@@ -1,0 +1,30 @@
+body { margin: 0; font-family: "Inter", var(--vscode-font-family); color: var(--vscode-foreground);
+       background: radial-gradient(1200px 500px at 20% -10%, color-mix(in srgb, var(--vscode-textLink-foreground) 18%, transparent), transparent),
+                   radial-gradient(900px 500px at 110% 10%, color-mix(in srgb, var(--vscode-activityBarBadge-background) 14%, transparent), transparent),
+                   var(--vscode-editor-background); min-height: 100vh; }
+main { max-width: 1040px; margin: 0 auto; padding: 48px 32px; }
+.hero { display: flex; align-items: center; gap: 20px; }
+.logo { width: 76px; height: 76px; filter: drop-shadow(0 8px 24px #0006); }
+h1 { margin: 0; font-size: 34px; font-weight: 700; letter-spacing: .5px;
+     background: linear-gradient(90deg, var(--vscode-textLink-foreground), var(--vscode-activityBarBadge-background));
+     -webkit-background-clip: text; background-clip: text; color: transparent; }
+.sub { margin: 4px 0 0; color: var(--vscode-descriptionForeground); font-size: 15px; }
+.model { margin-left: auto; font-size: 12px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--vscode-widget-border); }
+.model.up { color: var(--vscode-activityBarBadge-background); }
+.model.down { color: var(--vscode-editorWarning-foreground); }
+#ask { display: flex; gap: 8px; margin: 32px 0 28px; }
+#ask input { flex: 1; font: inherit; font-size: 15px; padding: 14px 18px; border-radius: 14px; color: var(--vscode-input-foreground);
+             background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border, #8884); outline: none; }
+#ask input:focus { border-color: var(--vscode-focusBorder); box-shadow: 0 0 0 3px color-mix(in srgb, var(--vscode-focusBorder) 30%, transparent); }
+#ask button { font: inherit; padding: 0 22px; border: 0; border-radius: 14px; cursor: pointer; font-weight: 600;
+              color: var(--vscode-button-foreground); background: linear-gradient(90deg, var(--vscode-button-background), var(--vscode-activityBarBadge-background)); }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.card { background: color-mix(in srgb, var(--vscode-editorWidget-background) 85%, transparent); border: 1px solid var(--vscode-widget-border);
+        border-radius: 16px; padding: 18px 20px; backdrop-filter: blur(10px); }
+.card h2 { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--vscode-textLink-foreground); }
+.card p { margin: 8px 0; color: var(--vscode-descriptionForeground); line-height: 1.45; }
+.card button { display: block; width: 100%; text-align: left; font: inherit; padding: 8px 10px; margin: 2px 0; border: 0; border-radius: 9px;
+               background: none; color: var(--vscode-foreground); cursor: pointer; }
+.card button:hover { background: var(--vscode-list-hoverBackground); }
+.card button small { display: block; color: var(--vscode-descriptionForeground); font-size: 11px; margin-left: 22px; overflow: hidden; text-overflow: ellipsis; }
+.muted { color: var(--vscode-descriptionForeground); }

@@ -1,0 +1,3 @@
+#!/bin/sh
+# NEOX native messaging host (org.airux.neox): started by Chromium for NEOX's extension only.
+exec /usr/lib/aira/run aira.neox_host "$@"

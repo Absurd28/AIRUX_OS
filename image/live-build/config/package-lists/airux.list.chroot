@@ -54,6 +54,8 @@ fonts-dejavu
 fonts-noto-core
 fonts-noto-color-emoji
 fonts-hack
+fonts-inter
+fonts-jetbrains-mono
 xdg-utils
 xdg-user-dirs
 

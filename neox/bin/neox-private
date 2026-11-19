@@ -1,0 +1,25 @@
+#!/bin/bash
+# NEOX Private (Tor): a throwaway NEOX window whose traffic goes through Tor, like Brave's private
+# window with Tor. Tor is started only when asked for (AIRUX does not run it at boot), and the
+# window's profile is deleted when it closes.
+set -u
+notify() { notify-send -a NEOX -i neox "NEOX Private (Tor)" "$1" 2>/dev/null || echo "$1" >&2; }
+if ! systemctl is-active --quiet tor.service; then
+    notify "Starting Tor…"
+    systemctl start tor.service || { notify "Tor could not be started."; exit 1; }
+fi
+i=0
+until (exec 3<>/dev/tcp/127.0.0.1/9050) 2>/dev/null; do
+    i=$((i + 1)); [ "$i" -gt 60 ] && { notify "Tor did not come up on 127.0.0.1:9050."; exit 1; }
+    sleep 0.5
+done
+dir=$(mktemp -d "${XDG_RUNTIME_DIR:-/tmp}/neox-tor.XXXXXX")
+trap 'rm -rf "$dir"' EXIT INT TERM
+/usr/lib/chromium/chromium \
+    --user-data-dir="$dir" \
+    --class=neox-tor \
+    --proxy-server="socks5://127.0.0.1:9050" \
+    --host-resolver-rules="MAP * ~NOTFOUND , EXCLUDE 127.0.0.1" \
+    --load-extension="$(/usr/lib/neox/user-extensions ubol)" \
+    --no-first-run --no-default-browser-check --disable-pings --disable-sync --password-store=basic \
+    "${1:-https://check.torproject.org/}"

@@ -42,6 +42,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--no-kiosk", action="store_true", help="do not open Chromium")
     args = ap.parse_args(argv)
     cfg = Config()
+    if shutil.which("neox"):   # in the desktop session, AIRA browses in NEOX (aira.neox)
+        os.environ.setdefault("AIRA_BROWSER", "neox")
     shell = Shell(args.port, token_file=token_file())
     orch = Orchestrator(cfg, shell.confirm, start_controller=True)
     speaker = choose_speaker(probe().total_memory, out_dir=cfg.data_dir / "speech")
