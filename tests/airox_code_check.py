@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import os
+import pwd
 import shutil
 import subprocess
 import sys
@@ -57,6 +58,12 @@ def main() -> int:
     try:
         env = dict(os.environ, AIRA_IT_RESULTS=str(results), DONT_PROMPT_WSL_INSTALL="1")
         env.pop("WAYLAND_DISPLAY", None)
+        # started through runuser from root, the environment still points at root's runtime dir and
+        # home: AIROX Code then hung before writing a single log line. Use this user's own.
+        rt = env.get("XDG_RUNTIME_DIR")
+        if rt and (not os.path.isdir(rt) or os.stat(rt).st_uid != os.getuid()):
+            env.pop("XDG_RUNTIME_DIR")
+        env["HOME"] = pwd.getpwuid(os.getuid()).pw_dir
         cmd = ["xvfb-run", "-a", "-s", "-screen 0 1600x1000x24", str(APP / "codium"),
                "--no-sandbox", "--disable-gpu", "--disable-workspace-trust", "--skip-welcome",
                f"--user-data-dir={tmp / 'user'}", f"--extensions-dir={tmp / 'exts'}",

@@ -331,7 +331,8 @@ def register(reg: Registry, browser_session=None) -> None:
     if browser_session is not None:
         fn, risk, rb = make_browser_tool(browser_session)
         reg.add(Tool("browser", A, "control the web browser: open a page, search the web, read the page, "
-                     "click a link or button by its text, go back",
+                     "click a link or button by its text, go back. To search the web, use action search with the "
+                     "user's search terms (do not open a search engine's home page)",
                      {"action": S("what to do", enum=["open", "search", "read", "click", "back"]),
                       "query": S("search terms, for search"), "url": S("address, for open"),
                       "text": S("link or button text, for click")}, ["action"], fn, risk,

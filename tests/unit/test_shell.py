@@ -101,6 +101,38 @@ def test_typed_command_flows_to_transcript(running):
     assert ev["text"] == "Your notes folder is empty." and ev["calls"][0]["tool"] == "list_dir"
 
 
+def test_panel_serves_before_aira_is_loaded(home, tmp_path):
+    """The panel opens first; a command typed while AIRA loads waits for her, then runs."""
+    sh = Shell(port=0)
+    sh.serve()
+    try:
+        q = sh.subscribe()
+        page = urllib.request.urlopen(f"http://127.0.0.1:{sh.port}/", timeout=5).read().decode()
+        assert sh.token in page
+        assert post(sh.port, "/settings", {}, sh.token)[0] == 503          # "AIRA is not ready"
+        assert post(sh.port, "/command", {"text": "What's in my notes?"}, sh.token)[0] == 202
+        wait_for(q, "thinking")
+        time.sleep(0.5)
+        orch, _, _ = make(home, tmp_path, [route("desktop", "list"), call("list_dir", path="~/notes"),
+                                           reply("Your notes folder is empty.")])
+        sh.attach(orch)
+        assert wait_for(q, "aira")["text"] == "Your notes folder is empty."
+    finally:
+        sh.stop()
+
+
+def test_command_gives_up_if_aira_never_loads(monkeypatch):
+    monkeypatch.setattr(shell_server, "READY_WAIT", 0.3)
+    sh = Shell(port=0)
+    sh.serve()
+    try:
+        q = sh.subscribe()
+        post(sh.port, "/command", {"text": "hi"}, sh.token)
+        assert wait_for(q, "aira")["text"] == shell_server.STARTING
+    finally:
+        sh.stop()
+
+
 def test_confirmation_is_asked_in_the_shell_and_denied(running, home):
     script = [route("desktop", "delete report"), call("delete_path", path="~/report.txt"),
               call("delete_path", path="~/report.txt"), call("delete_path", path="~/report.txt"),

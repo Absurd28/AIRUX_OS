@@ -104,6 +104,24 @@ def test_yes_to_did_you_mean_reruns_with_that_path(home, tmp_path):
     assert orch.handle("yes").kind == "reply" and executed == ["read_file"]
 
 
+@pytest.mark.parametrize("command, browser", [
+    ("Open the browser and search for debian trixie release notes", True),
+    ("Search for flights to Pune in NEOX", True),
+    ("Search arXiv for diffusion models", False),
+    ("Which browser is the default?", False),
+])
+def test_browser_commands_go_to_the_desktop_agent_whole(command, browser):
+    from aira.orchestrator import BROWSER_COMMAND
+    assert bool(BROWSER_COMMAND.search(command)) is browser
+
+
+def test_browser_command_skips_the_router(home, tmp_path):
+    orch, llm, executed = make(home, tmp_path, [{"tool": "ask_user", "args": {"question": "Search for what?"}}])
+    turn = orch.handle("Open the browser and search for debian trixie release notes")
+    assert turn.route == [{"agent": "desktop", "task": "Open the browser and search for debian trixie release notes"}]
+    assert len(llm.calls) == 1 and "Desktop agent" in llm.calls[0]["messages"][0]["content"]
+
+
 def test_yes_without_a_question_is_not_a_replay(home, tmp_path):
     orch, llm, executed = make(home, tmp_path, [route("desktop", "delete ~/reprt.txt"),
                                                 call("delete_path", path="~/reprt.txt"),

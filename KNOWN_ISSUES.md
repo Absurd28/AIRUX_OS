@@ -37,9 +37,11 @@ The phase each issue was found in is in brackets.
 - **Results vary between runs.** Risky calls are sampled three times at temperature 0.7 (layer
   5), so the same command can pass in one run and miss in the next. Phase 5 passed 8/10, then
   10/10 on the same code. [9]
-- **The 2B model sometimes misspells a path** (it once wrote `~/.demo.txt` for "demo.txt in my home
-  folder"). The entity check (layer 2) stops it and asks "Did you mean ~/demo.txt?"; answering
-  "yes" runs the request again with that path, through every check. [9]
+- **On the 2B model, "Delete demo.txt in my home folder" usually stops at a question.** In QEMU it
+  wrote `~/.demo.txt` in 3 of 4 dry runs. The entity check (layer 2) stopped it and asked "Did you
+  mean ~/demo.txt?"; answering "yes" runs the request again with that path, through every check.
+  On WSL with a GPU, its three samples disagreed, so AIRA asked instead. The 9B model asked to
+  confirm deleting `~/demo.txt` in 4 of 4 runs. Nothing was ever deleted without confirmation. [9]
 - **Small talk can offer things that do not apply.** For example, it offered a GPU check on a VM
   with no GPU. The reply checker stops invented facts and "done" claims, not irrelevant offers.
   [8, 9]

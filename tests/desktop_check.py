@@ -159,6 +159,10 @@ def main() -> int:
 
     aira = wait_window(env, r"^AIRA$", 120)
     print(f"AIRA window: {aira}")
+    if not aira:   # what AIRA's shell did, and what was on screen instead
+        print(f"windows: {windows(env)}")
+        print(as_user(env, "journalctl --user -b --no-pager -o short-monotonic | grep -i 'aira.shell\\|aira-shell' "
+                           "| grep -v AIRAWIN | tail -15")["out"])
     r["aira_panel"] = bool(aira) and abs((aira[1] + aira[3]) - W) <= 12 and aira[4] >= H * 0.8 and aira[3] <= 480
 
     comp = as_user(env, "qdbus6 --literal org.kde.kglobalaccel /component/aira_ptt_desktop "

@@ -33,29 +33,37 @@ def app_window(url: str, data_dir: Path, wm_class: str = "aira") -> list[str]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    from ..orchestrator import Orchestrator
-    from ..profiler.probe import probe
-    from ..tts import choose_speaker
-    from ..voice import Recorder, Transcriber, VoiceSession
+    t0 = time.monotonic()
     ap = argparse.ArgumentParser(prog="aira.shell")
     ap.add_argument("--port", type=int, default=8765)
     ap.add_argument("--no-kiosk", action="store_true", help="do not open Chromium")
     args = ap.parse_args(argv)
     cfg = Config()
+    cfg.ensure_dirs()
     if shutil.which("neox"):   # in the desktop session, AIRA browses in NEOX (aira.neox)
         os.environ.setdefault("AIRA_BROWSER", "neox")
+    # The panel and push-to-talk come first; AIRA herself (the orchestrator, voice and models) loads
+    # after. On a live USB her imports are read from the compressed image and can take a while;
+    # a command given meanwhile waits for her (Shell._wait_ready).
+    from ..voice import Recorder
     shell = Shell(args.port, token_file=token_file())
-    orch = Orchestrator(cfg, shell.confirm, start_controller=True)
-    speaker = choose_speaker(probe().total_memory, out_dir=cfg.data_dir / "speech")
-    shell.attach(orch, VoiceSession(orch, Transcriber(), speaker), Recorder(cfg.data_dir / "recordings"))
+    shell.recorder = Recorder(cfg.data_dir / "recordings")
     shell.serve()
     url = f"http://127.0.0.1:{shell.port}/"
-    print(f"AIRA shell on {url}", flush=True)
+    print(f"AIRA shell on {url} ({time.monotonic() - t0:.1f}s)", flush=True)
     kiosk = None
     if not args.no_kiosk:
         # an app window with the class "aira": the taskbar groups it with the pinned AIRA icon, and
         # the AIRUX KWin script docks it on the right edge like a side panel
         kiosk = subprocess.Popen(app_window(url, cfg.data_dir), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    from ..orchestrator import Orchestrator
+    from ..profiler.probe import probe
+    from ..tts import choose_speaker
+    from ..voice import Transcriber, VoiceSession
+    orch = Orchestrator(cfg, shell.confirm, start_controller=True)
+    speaker = choose_speaker(probe().total_memory, out_dir=cfg.data_dir / "speech")
+    shell.attach(orch, VoiceSession(orch, Transcriber(), speaker))
+    print(f"AIRA ready ({time.monotonic() - t0:.1f}s after start)", flush=True)
     stop = []
     signal.signal(signal.SIGTERM, lambda *a: stop.append(1))
     try:

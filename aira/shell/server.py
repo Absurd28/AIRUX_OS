@@ -49,6 +49,10 @@ def tags_for(reply: str) -> list[str]:
     return tags
 
 
+READY_WAIT = 120.0   # seconds a command waits for AIRA to finish loading
+STARTING = "I'm still starting up. Try again in a few seconds."
+
+
 class Shell:
     def __init__(self, port: int = 8765, token: str | None = None, token_file: Path | None = None):
         self.port = port
@@ -57,6 +61,7 @@ class Shell:
         self.orch = None
         self.voice = None
         self.recorder = None
+        self._ready = threading.Event()
         self._subs: list[queue.Queue] = []
         self._lock = threading.Lock()
         self.pending: dict[str, dict] = {}
@@ -118,8 +123,15 @@ class Shell:
 
     # ---- running commands
     def attach(self, orch, voice_session=None, recorder=None) -> None:
-        self.orch, self.voice, self.recorder = orch, voice_session, recorder
+        self.voice = voice_session
+        self.recorder = recorder or self.recorder
         orch.listeners.append(self.publish)
+        self.orch = orch
+        self._ready.set()
+
+    def _wait_ready(self) -> bool:
+        """The panel opens before AIRA has loaded (attach): a command given meanwhile waits for her."""
+        return self._ready.wait(READY_WAIT)
 
     def _finish(self, turn) -> None:
         self.publish({"event": "aira", "text": turn.reply, "kind": turn.kind, "tags": tags_for(turn.reply),
@@ -131,6 +143,10 @@ class Shell:
             with self.busy:
                 self.publish({"event": "you", "text": text, "via": "typed"})
                 self.publish({"event": "thinking"})
+                if not self._wait_ready():
+                    self.publish({"event": "aira", "text": STARTING, "tags": []})
+                    self.publish({"event": "idle"})
+                    return
                 try:
                     self._finish(self.orch.handle(text))
                 except Exception as exc:
@@ -139,7 +155,7 @@ class Shell:
         threading.Thread(target=work, daemon=True).start()
 
     def ptt(self, action: str) -> dict:
-        if self.recorder is None or self.voice is None:
+        if self.recorder is None:      # recording works while AIRA is still loading
             return {"ok": False, "error": "voice is not available"}
         if action == "toggle":
             action = "stop" if self.recorder.proc is not None else "start"
@@ -155,6 +171,10 @@ class Shell:
         def work():
             with self.busy:
                 self.publish({"event": "thinking"})
+                if not self._wait_ready() or self.voice is None:
+                    self.publish({"event": "aira", "text": STARTING, "tags": []})
+                    self.publish({"event": "idle"})
+                    return
                 vt = self.voice.handle_audio(wav)
                 self.publish({"event": "you", "text": vt.transcript or "(nothing heard)", "via": "voice"})
                 if vt.turn is not None:
