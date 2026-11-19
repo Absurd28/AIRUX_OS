@@ -152,8 +152,26 @@ These hallucination controls are implemented in code, not only in prompts.
 
 ## Shell and desktop
 
-- **AIRA shell:** an Xfce session that autostarts a full-screen AIRA shell. It shows the transcript,
-  the active agents, pending confirmations, and verified/unverified tags.
+- **Desktop:** KDE Plasma 6 laid out like Windows 11, set by the AIRUX look-and-feel package.
+  - A centred taskbar with a Start button (the AIRA logo), pinned apps, tray, clock and
+    show-desktop.
+  - Breeze Dark with the AIRUX accent.
+  - Dolphin as the file explorer, and System Settings for Wi-Fi, Bluetooth, display, sound, power
+    and apps.
+  - Windows shortcuts: Win, Win+E, Win+I, Win+D, Win+L, Win+arrows, Win+Shift+S.
+- **AIRA side panel:** the AIRA shell is a Chromium app window, docked on the right edge by a KWin
+  script, like Copilot. It shows the transcript, the active agents, pending confirmations, and
+  verified/unverified tags. Ctrl+Space (a KDE global shortcut) toggles push-to-talk from anywhere.
+- **AIRA Settings:** a page of the shell with voice, names, memory (pause, quota, export),
+  model and an activity log. Every change is read back before it is reported as saved.
+- **AIROX Code:** VSCodium rebranded, with the AIRA extension built in:
+  - chat whose `[file:line]` citations are checked against the code AIRA read;
+  - fill-in-the-middle inline suggestions;
+  - Fix / Refactor / Document / Tests, shown as a diff and applied only after Accept, then read
+    back;
+  - commit messages, and explanations of terminal errors and problems.
+
+  It talks only to the model on this computer.
 - **Browser control:** Chromium driven through Playwright.
 
 ## Image
@@ -164,8 +182,8 @@ These hallucination controls are implemented in code, not only in prompts.
   - `aira-models-base.deb` holds the 2B model, embeddings, whisper and Kokoro.
 - **First boot:** a profiler measures the hardware and recommends the right model tier, which
   `aira-models` downloads after asking.
-- **ISO:** a live-build image with AIRUX branding, the Calamares installer, Plymouth, and the
-  developer toolchain.
+- **ISO:** a live-build image with AIRUX branding, KDE Plasma, the Calamares installer, Plymouth,
+  the developer toolchain and AIROX Code.
 
 ## Build milestones
 

@@ -50,6 +50,25 @@
   #talk { background: var(--accent); color: #07121c; min-width: 120px; }
   #talk.on { background: var(--warn); }
   #send { background: var(--chip); color: var(--text); }
+  /* side panel (AIRA docked on the right, about 440 px wide): one column, agents as chips on top,
+     confirmations stay visible above the conversation, nothing scrolls sideways */
+  @media (max-width: 760px) {
+    html, body { font-size: 15px; overflow-x: hidden; }
+    header { padding: 10px 14px; gap: 8px; }
+    header .full { display: none; }
+    main { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+    aside { border-left: 0; border-bottom: 1px solid var(--line); padding: 10px 14px; gap: 10px; overflow: visible; }
+    aside h2 { display: none; }
+    #agents { display: flex; flex-wrap: wrap; gap: 6px; }
+    .agent { border: 0; padding: 2px 8px; border-radius: 999px; background: var(--chip); font-size: 12px; gap: 6px; }
+    .agent .st { font-size: 11px; }
+    #none { display: none; }
+    #log { padding: 14px; }
+    .msg { max-width: 100%; }
+    footer { padding: 10px 14px; gap: 6px; flex-wrap: wrap; }
+    #text { min-width: 0; flex: 1 1 100%; }
+    #send, #talk { flex: 1; min-width: 0; padding: 8px 10px; }
+  }
 </style>
 </head>
 <body>

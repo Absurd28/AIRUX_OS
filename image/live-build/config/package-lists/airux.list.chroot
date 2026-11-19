@@ -18,44 +18,96 @@ locales
 qemu-guest-agent
 spice-vdagent
 
-# --- desktop (Xfce)
+# --- desktop: KDE Plasma 6, Windows 11 layout (look-and-feel package org.airux.desktop)
+# Plasma's useful Recommends are listed here on purpose: the image is built without Recommends,
+# and on a real laptop that silently dropped the audio, Bluetooth and drive-mount pieces.
 xserver-xorg-core
 xserver-xorg-input-all
 xserver-xorg-video-all
 x11-xserver-utils
-xfce4
-xfce4-terminal
-xfce4-notifyd
-xfce4-screenshooter
-xfce4-whiskermenu-plugin
-thunar
-mousepad
-lightdm
-lightdm-gtk-greeter
+plasma-desktop
+plasma-workspace
+kwin-wayland
+kwin-x11
+xwayland
+sddm
+sddm-theme-breeze
+kde-config-sddm
+plasma-integration
+xdg-desktop-portal-kde
+xdg-desktop-portal-gtk
+kde-cli-tools
+libkf6kcmutils-bin
+kde-config-screenlocker
+kde-config-gtk-style
+breeze-gtk-theme
+kmenuedit
+kwrited
 desktop-base
 # the systemd user bus: PipeWire's user units need it (dbus-x11's separate bus leaves PipeWire
 # stopped and the system silent)
 dbus-user-session
-lxpolkit
-gnome-keyring
-libpam-gnome-keyring
 libsecret-tools
-network-manager
-network-manager-gnome
 plymouth
 plymouth-themes
 fonts-dejavu
+fonts-noto-core
+fonts-noto-color-emoji
+fonts-hack
 xdg-utils
+xdg-user-dirs
 
-# --- audio
+# --- settings: Wi-Fi, Bluetooth, display, sound, power, printers, disks, app store
+systemsettings
+kinfocenter
+network-manager
+plasma-nm
+plasma-pa
+bluez
+bluedevil
+libspa-0.2-bluetooth
+powerdevil
+power-profiles-daemon
+upower
+kscreen
+plasma-systemmonitor
+ksystemstats
+plasma-disks
+print-manager
+plasma-discover
+udisks2
+
+# --- apps: File Explorer (Dolphin) and the everyday tools
+dolphin
+dolphin-plugins
+kio-extras
+kio-fuse
+kdegraphics-thumbnailers
+ffmpegthumbs
+qt6-image-formats-plugins
+kimageformat6-plugins
+konsole
+kwrite
+kcalc
+kde-spectacle
+ark
+gwenview
+okular
+partitionmanager
+
+# --- audio: alsa-ucm-conf tells PipeWire how to drive modern laptop audio (Intel SOF speakers and
+# microphones); without it a real laptop had no usable microphone
 pipewire
 pipewire-pulse
 wireplumber
 pulseaudio-utils
 alsa-utils
+alsa-ucm-conf
 
 # --- AIRA's needs
 chromium
+wl-clipboard
+xclip
 libnotify-bin
 poppler-utils
 packagekit

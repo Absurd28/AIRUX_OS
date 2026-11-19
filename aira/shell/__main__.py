@@ -1,8 +1,9 @@
 """python -m aira.shell [--no-kiosk] [--port 8765]
 
-Starts the shell server and shows it full-screen in Chromium (kiosk mode). Autostarted in the Xfce
-session by /etc/xdg/autostart/aira-shell.desktop. The push-to-talk shortcut runs `aira-ptt`, which
-posts to /ptt/toggle with the token from ~/.local/state/aira/shell.token.
+Starts the shell server and shows it in a Chromium app window, docked on the right edge by the
+AIRUX KWin script (like a Copilot panel). Autostarted at login by
+/etc/xdg/autostart/aira-shell.desktop. The global Ctrl+Space shortcut runs `aira-ptt`, which posts
+to /ptt/toggle with the token from ~/.local/state/aira/shell.token.
 """
 from __future__ import annotations
 
@@ -21,6 +22,14 @@ from .server import Shell
 
 def token_file() -> Path:
     return Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state")) / "aira" / "shell.token"
+
+
+def app_window(url: str, data_dir: Path, wm_class: str = "aira") -> list[str]:
+    """Chromium as a plain app window (no tabs or address bar) for an AIRA page."""
+    exe = shutil.which("chromium") or "/usr/bin/chromium"
+    return [exe, f"--app={url}", f"--class={wm_class}", "--window-size=440,860", "--no-first-run",
+            "--noerrdialogs", "--password-store=basic",   # never ask the user to unlock a keyring
+            f"--user-data-dir={data_dir / 'shell-profile'}"]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -42,14 +51,9 @@ def main(argv: list[str] | None = None) -> int:
     print(f"AIRA shell on {url}", flush=True)
     kiosk = None
     if not args.no_kiosk:
-        exe = shutil.which("chromium") or "/usr/bin/chromium"
-        # full screen on an installed system; a normal window in the live session, so the desktop
-        # and its "Install AIRUX" launcher stay reachable
-        mode = [] if Path("/run/live/medium").exists() else ["--kiosk"]
-        kiosk = subprocess.Popen([exe, *mode, f"--app={url}", "--no-first-run", "--noerrdialogs",
-                                  "--password-store=basic",   # never ask the user to unlock a keyring
-                                  f"--user-data-dir={cfg.data_dir / 'shell-profile'}"],
-                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # an app window with the class "aira": the taskbar groups it with the pinned AIRA icon, and
+        # the AIRUX KWin script docks it on the right edge like a side panel
+        kiosk = subprocess.Popen(app_window(url, cfg.data_dir), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     stop = []
     signal.signal(signal.SIGTERM, lambda *a: stop.append(1))
     try:

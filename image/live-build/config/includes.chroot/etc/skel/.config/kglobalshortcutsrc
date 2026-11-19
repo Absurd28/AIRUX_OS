@@ -1,0 +1,5 @@
+[services][systemsettings.desktop]
+_launch=Meta+I
+
+[services][aira-ptt.desktop]
+_launch=Ctrl+Space

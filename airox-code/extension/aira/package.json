@@ -1,0 +1,89 @@
+{
+  "name": "aira",
+  "displayName": "AIRA",
+  "description": "AIRA, the Adaptive Intelligent Research Assistant, in AIROX Code: chat about your code, inline suggestions, reviewed edits, commit messages and error explanations. Runs on your computer's local model.",
+  "version": "0.1.0",
+  "publisher": "airux",
+  "license": "MIT",
+  "engines": { "vscode": "^1.90.0" },
+  "categories": ["AI", "Chat", "Programming Languages"],
+  "icon": "media/aira.png",
+  "main": "./extension.js",
+  "activationEvents": ["onStartupFinished"],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [{ "id": "aira", "title": "AIRA", "icon": "media/aira-mono.svg" }]
+    },
+    "views": {
+      "aira": [{ "type": "webview", "id": "aira.chat", "name": "Chat" }]
+    },
+    "commands": [
+      { "command": "aira.ask", "title": "Ask AIRA", "category": "AIRA", "icon": "$(comment-discussion)" },
+      { "command": "aira.newChat", "title": "New Chat", "category": "AIRA", "icon": "$(add)" },
+      { "command": "aira.editWithInstruction", "title": "Edit with AIRA…", "category": "AIRA" },
+      { "command": "aira.fix", "title": "Fix", "category": "AIRA" },
+      { "command": "aira.refactor", "title": "Refactor", "category": "AIRA" },
+      { "command": "aira.document", "title": "Add Documentation", "category": "AIRA" },
+      { "command": "aira.tests", "title": "Write Tests", "category": "AIRA" },
+      { "command": "aira.explainSelection", "title": "Explain", "category": "AIRA" },
+      { "command": "aira.acceptEdit", "title": "Accept AIRA's Change", "category": "AIRA", "icon": "$(check)" },
+      { "command": "aira.rejectEdit", "title": "Reject AIRA's Change", "category": "AIRA", "icon": "$(close)" },
+      { "command": "aira.commitMessage", "title": "Write Commit Message with AIRA", "category": "AIRA", "icon": "$(sparkle)" },
+      { "command": "aira.explainTerminal", "title": "Explain with AIRA", "category": "AIRA" },
+      { "command": "aira.explainProblems", "title": "Explain Problems in This File", "category": "AIRA" },
+      { "command": "aira.toggleInline", "title": "Toggle Inline Suggestions", "category": "AIRA" }
+    ],
+    "submenus": [{ "id": "aira.editor", "label": "AIRA" }],
+    "menus": {
+      "editor/context": [{ "submenu": "aira.editor", "group": "1_aira" }],
+      "aira.editor": [
+        { "command": "aira.explainSelection", "group": "1@1" },
+        { "command": "aira.fix", "group": "2@1" },
+        { "command": "aira.refactor", "group": "2@2" },
+        { "command": "aira.document", "group": "2@3" },
+        { "command": "aira.tests", "group": "2@4" },
+        { "command": "aira.editWithInstruction", "group": "3@1" }
+      ],
+      "editor/title": [
+        { "command": "aira.acceptEdit", "when": "aira.reviewing && resourceScheme == aira-proposal", "group": "navigation@1" },
+        { "command": "aira.rejectEdit", "when": "aira.reviewing && resourceScheme == aira-proposal", "group": "navigation@2" }
+      ],
+      "scm/title": [{ "command": "aira.commitMessage", "when": "scmProvider == git", "group": "navigation@1" }],
+      "terminal/context": [{ "command": "aira.explainTerminal", "group": "aira@1" }],
+      "view/title": [{ "command": "aira.newChat", "when": "view == aira.chat", "group": "navigation" }],
+      "commandPalette": [
+        { "command": "aira.acceptEdit", "when": "aira.reviewing" },
+        { "command": "aira.rejectEdit", "when": "aira.reviewing" }
+      ]
+    },
+    "keybindings": [
+      { "command": "aira.editWithInstruction", "key": "ctrl+i", "when": "editorTextFocus && !editorReadonly" },
+      { "command": "aira.ask", "key": "ctrl+alt+i" },
+      { "command": "aira.acceptEdit", "key": "ctrl+enter", "when": "aira.reviewing" },
+      { "command": "aira.rejectEdit", "key": "escape", "when": "aira.reviewing && !suggestWidgetVisible && !findWidgetVisible && !inlineSuggestionVisible" }
+    ],
+    "configuration": {
+      "title": "AIRA",
+      "properties": {
+        "aira.serverUrl": {
+          "type": "string", "default": "http://127.0.0.1:8080",
+          "description": "AIRA's local model server (llama-server). Only addresses on this computer are accepted."
+        },
+        "aira.inlineSuggestions.enabled": {
+          "type": "boolean", "default": true, "description": "Show grey ghost-text suggestions as you type (Tab accepts)."
+        },
+        "aira.inlineSuggestions.debounceMs": {
+          "type": "number", "default": 350, "minimum": 100, "description": "Pause after typing before asking for a suggestion."
+        },
+        "aira.context.maxChars": {
+          "type": "number", "default": 12000, "minimum": 2000, "description": "How much code AIRA reads for a chat answer."
+        }
+      }
+    },
+    "configurationDefaults": {
+      "workbench.colorTheme": "Default Dark Modern",
+      "editor.inlineSuggest.enabled": true,
+      "telemetry.telemetryLevel": "off"
+    }
+  }
+}

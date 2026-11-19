@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=AIRA Settings
+Comment=Voice, names, memory and privacy for AIRA
+Exec=aira-settings
+Icon=aira
+Terminal=false
+Categories=Settings;Utility;
+Keywords=aira;assistant;voice;memory;privacy;
+StartupWMClass=chrome-127.0.0.1__settings-Default

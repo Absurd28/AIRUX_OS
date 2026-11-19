@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Talk to AIRA
+Comment=Push to talk: start or stop listening
+Exec=aira-ptt
+Icon=aira
+Terminal=false
+NoDisplay=true
+X-KDE-Shortcuts=Ctrl+Space

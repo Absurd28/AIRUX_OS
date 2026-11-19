@@ -1,4 +1,3 @@
-[greeter]
+[General]
+type=image
 background=/usr/share/backgrounds/airux/airux-wallpaper.png
-theme-name=Adwaita-dark
-icon-theme-name=Adwaita

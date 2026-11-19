@@ -41,6 +41,24 @@ The phase each issue was found in is in brackets.
   with no GPU. The reply checker stops invented facts and "done" claims, not irrelevant offers.
   [8, 9]
 
+## Desktop and AIROX Code
+
+- **8 GB of RAM is now the minimum.** Plasma, AIRA's side panel and the 2B model need about 4 GB
+  together; under 6 GB, AIRA uses the lighter Piper voice.
+- **AIRA's side panel is placed by a KWin script.** It recognises AIRA by its title and Chromium's
+  app id. If you move or resize it, it stays where you put it until AIRA starts again.
+- **The Start menu header shows a placeholder user picture** (Debian's), until you set your own in
+  Settings → Users.
+- **Drives have no letters (C:, D:).** Linux has one folder tree; Dolphin lists drives by name
+  under Devices.
+- **AIROX Code's extensions come from Open VSX,** like any VSCodium. Microsoft-only extensions
+  (Pylance, C# Dev Kit, Remote SSH) are not available there. Opening the Extensions view contacts
+  open-vsx.org.
+- **AIRA in AIROX Code runs on the same local model as AIRA.** Inline suggestions take about 2 s
+  on the 9B model with a GPU, and longer on the CPU-only 2B tier.
+- **Untested on real hardware so far:** the Plasma desktop, AIROX Code and the fixed audio stack.
+  The last real-laptop test (with Xfce) failed; see docs/DEMO.md.
+
 ## Installer and image
 
 - **Installs are UEFI-only.** grub-pc conflicts with grub-efi-amd64 in the offline package pool.

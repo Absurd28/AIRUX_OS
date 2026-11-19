@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AIRA Settings</title>
+<style>
+  :root {
+    --bg: #f3f3f3; --panel: #ffffff; --text: #1b1b1b; --muted: #5f6368; --line: #e5e5e5;
+    --accent: #0a6cbd; --accent-soft: #e6f1fb; --ok: #1e7f4f; --err: #b3261e; --nav-hover: #eaeaea;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #202020; --panel: #2b2b2b; --text: #f2f2f2; --muted: #a8adb3; --line: #3a3a3a;
+            --accent: #7cc4ff; --accent-soft: #24384a; --ok: #59c38a; --err: #ff8a80; --nav-hover: #333333; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.45 "Segoe UI", "Noto Sans", system-ui, sans-serif; background: var(--bg); color: var(--text); }
+  .app { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+  nav { padding: 20px 10px; }
+  .me { display: flex; align-items: center; gap: 12px; padding: 6px 10px 18px; }
+  .me .logo { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #7cc4ff, #59c38a);
+              display: grid; place-items: center; color: #0d1117; font-weight: 800; }
+  .me b { display: block; font-size: 15px; } .me span { color: var(--muted); font-size: 12px; }
+  nav button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 9px 12px; margin: 2px 0;
+               border: 0; border-radius: 6px; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; position: relative; }
+  nav button:hover { background: var(--nav-hover); }
+  nav button.on { background: var(--nav-hover); font-weight: 600; }
+  nav button.on::before { content: ""; position: absolute; left: 0; top: 9px; bottom: 9px; width: 3px; border-radius: 2px; background: var(--accent); }
+  main { padding: 28px 36px; max-width: 900px; }
+  h1 { font-size: 28px; font-weight: 600; margin: 0 0 18px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 18px; margin-bottom: 6px;
+          display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .card .t b { display: block; font-weight: 500; } .card .t span { color: var(--muted); font-size: 12.5px; }
+  select, input[type=text], input[type=number] { font: inherit; color: var(--text); background: var(--bg);
+          border: 1px solid var(--line); border-bottom: 2px solid var(--muted); border-radius: 4px; padding: 6px 10px; min-width: 180px; }
+  .btn { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 4px; padding: 6px 16px; cursor: pointer; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  @media (prefers-color-scheme: dark) { .btn.primary { color: #0d1117; } }
+  .switch { position: relative; width: 40px; height: 20px; flex: none; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch span { position: absolute; inset: 0; border: 1px solid var(--muted); border-radius: 20px; cursor: pointer; transition: .15s; }
+  .switch span::after { content: ""; position: absolute; width: 12px; height: 12px; left: 3px; top: 3px; border-radius: 50%; background: var(--muted); transition: .15s; }
+  .switch input:checked + span { background: var(--accent); border-color: var(--accent); }
+  .switch input:checked + span::after { left: 23px; background: #fff; }
+  .bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; width: 220px; }
+  .bar i { display: block; height: 100%; background: var(--accent); }
+  table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  td, th { padding: 9px 12px; border-bottom: 1px solid var(--line); text-align: left; font-size: 13px; }
+  th { color: var(--muted); font-weight: 500; }
+  .pill { padding: 1px 8px; border-radius: 10px; font-size: 12px; }
+  .pill.y { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+  .pill.n { background: color-mix(in srgb, var(--err) 18%, transparent); color: var(--err); }
+  #toast { position: fixed; bottom: 20px; right: 20px; background: var(--panel); border: 1px solid var(--line);
+           border-left: 4px solid var(--ok); padding: 10px 16px; border-radius: 6px; display: none; max-width: 420px; box-shadow: 0 6px 24px #0003; }
+  #toast.err { border-left-color: var(--err); }
+  .muted { color: var(--muted); }
+  section { display: none; } section.on { display: block; }
+  @media (max-width: 720px) {
+    .app { grid-template-columns: 1fr; }
+    nav { display: flex; overflow-x: auto; padding: 8px; gap: 4px; }
+    nav .me { display: none; }
+    nav button { width: auto; white-space: nowrap; flex: none; }
+    nav button.on::before { left: 10px; right: 10px; top: auto; bottom: 2px; width: auto; height: 3px; }
+    main { padding: 18px; }
+    .card { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <nav>
+    <div class="me"><div class="logo">A</div><div><b>AIRA</b><span>Adaptive Intelligent Research Assistant</span></div></div>
+    <button data-s="voice" class="on">🎙️ Voice</button>
+    <button data-s="you">🙂 How AIRA talks to you</button>
+    <button data-s="memory">🔐 Memory and privacy</button>
+    <button data-s="model">🧠 Model</button>
+    <button data-s="activity">📋 Activity</button>
+  </nav>
+  <main>
+    <section id="voice" class="on">
+      <h1>Voice</h1>
+      <div class="card"><div class="t"><b>AIRA's voice</b><span id="voice-note">Used for every spoken reply, reminder and briefing.</span></div>
+        <select id="voice-choice"></select></div>
+      <div class="card"><div class="t"><b>Push to talk</b><span>Press Ctrl+Space anywhere, speak, then press it again.</span></div><span class="muted">Ctrl+Space</span></div>
+    </section>
+
+    <section id="you">
+      <h1>How AIRA talks to you</h1>
+      <div class="card"><div class="t"><b>Names AIRA may call you</b><span>Separate with commas, e.g. Aryan, boss. Leave empty to use your account's first name.</span></div>
+        <div><input type="text" id="names" placeholder="Aryan, boss"> <button class="btn primary" id="names-save">Save</button></div></div>
+    </section>
+
+    <section id="memory">
+      <h1>Memory and privacy</h1>
+      <div class="card"><div class="t"><b>Remember new things</b><span>When off, AIRA keeps what she knows but records nothing new.</span></div>
+        <label class="switch"><input type="checkbox" id="mem-on"><span></span></label></div>
+      <div class="card"><div class="t"><b>Storage used</b><span id="mem-used">…</span></div><div class="bar"><i id="mem-bar"></i></div></div>
+      <div class="card"><div class="t"><b>Memory limit</b><span>64 MB to 2048 MB. When full, the least important old conversations go first.</span></div>
+        <div><input type="number" id="quota" min="64" max="2048" step="64"> MB <button class="btn" id="quota-save">Apply</button></div></div>
+      <div class="card"><div class="t"><b>Export my memory</b><span>Saves everything AIRA knows to a file in your home folder. The vault itself stays encrypted and never leaves this computer.</span></div>
+        <button class="btn" id="export">Export</button></div>
+      <div class="card"><div class="t"><b>Forget something</b><span>Ask AIRA: "forget my sister's birthday". She asks before deleting.</span></div></div>
+    </section>
+
+    <section id="model">
+      <h1>Model</h1>
+      <div class="card"><div class="t"><b>Local model server</b><span id="model-server">…</span></div></div>
+      <div class="card"><div class="t"><b>Size picked for this computer</b><span id="model-tier">…</span></div></div>
+      <div class="card"><div class="t"><b>Bigger model</b><span>If your hardware allows one, run <code>aira-models</code> in a terminal. It shows the download size and asks before downloading.</span></div></div>
+    </section>
+
+    <section id="activity">
+      <h1>Activity</h1>
+      <p class="muted">The last actions AIRA's agents took or asked about. Everything is logged in the encrypted vault.</p>
+      <table><thead><tr><th>When</th><th>Agent</th><th>Action</th><th>Result</th></tr></thead><tbody id="acts"></tbody></table>
+    </section>
+  </main>
+</div>
+<div id="toast"></div>
+<script>
+const TOKEN = "__AIRA_TOKEN__";
+const $ = (id) => document.getElementById(id);
+async function call(body) {
+  const r = await fetch("/settings", {method: "POST", headers: {"Content-Type": "application/json", "X-AIRA-Token": TOKEN},
+                                       body: JSON.stringify(body)});
+  const j = await r.json().catch(() => ({ok: false, error: "no answer"}));
+  if (!r.ok) throw new Error(j.error || ("HTTP " + r.status));
+  return j;
+}
+function toast(msg, bad) {
+  const t = $("toast"); t.textContent = msg; t.className = bad ? "err" : ""; t.style.display = "block";
+  clearTimeout(toast.h); toast.h = setTimeout(() => t.style.display = "none", 4000);
+}
+async function set(what, value) {
+  try { const r = await call({action: "set", what, value}); toast(r.message, !r.ok); await load(); }
+  catch (e) { toast("Not changed: " + e.message, true); }
+}
+function esc(s) { return String(s ?? "").replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c])); }
+async function load() {
+  let s;
+  try { s = await call({action: "get"}); } catch (e) { toast("AIRA is not ready yet: " + e.message, true); return; }
+  const vc = $("voice-choice");
+  vc.innerHTML = s.voice.choices.map(n => `<option ${n.toLowerCase() === s.voice.current ? "selected" : ""}>${esc(n)}</option>`).join("");
+  vc.disabled = s.voice.piper_fallback;
+  if (s.voice.piper_fallback) $("voice-note").textContent = "This computer has under 6 GB of memory, so AIRA uses the lighter Piper voice.";
+  $("names").value = s.names.join(", ");
+  $("mem-on").checked = !s.memory.paused;
+  $("mem-used").textContent = `${s.memory.used_mb} MB of ${s.memory.quota_mb} MB · ` +
+      Object.entries(s.memory.items).map(([k, n]) => `${n} ${k}`).join(", ");
+  $("mem-bar").style.width = Math.min(100, 100 * s.memory.used_mb / s.memory.quota_mb) + "%";
+  $("quota").value = s.memory.quota_mb;
+  $("model-server").textContent = s.model.server;
+  const r = s.model.recommendation;
+  $("model-tier").textContent = r ? `Qwen3.5 ${r.tier_installed} installed (this hardware suits ${r.tier_by_hardware})` : "Not measured yet.";
+  $("acts").innerHTML = s.actions.length ? s.actions.map(a => `<tr><td>${esc(a.when)}</td><td>${esc(a.agent)}</td><td>${esc(a.tool)}</td>
+      <td><span class="pill ${a.allowed && a.ok ? "y" : "n"}">${a.allowed ? (a.ok ? "done" : "failed") : "held"}</span> <span class="muted">${esc(a.decision)}</span></td></tr>`).join("")
+    : `<tr><td colspan="4" class="muted">No actions yet.</td></tr>`;
+}
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("nav button, section").forEach(x => x.classList.remove("on"));
+  b.classList.add("on"); $(b.dataset.s).classList.add("on");
+});
+$("voice-choice").onchange = (e) => set("voice", e.target.value);
+$("names-save").onclick = () => set("names", $("names").value.split(",").map(x => x.trim()).filter(Boolean));
+$("mem-on").onchange = (e) => set("memory_paused", !e.target.checked);
+$("quota-save").onclick = () => set("quota_mb", $("quota").value);
+$("export").onclick = () => set("export", true);
+load();
+</script>
+</body>
+</html>

@@ -64,7 +64,10 @@ install -Dm644 "$P/polkit/50-aira.rules" "$STAGE/usr/share/polkit-1/rules.d/50-a
 install -Dm644 "$P/xdg/autostart/aira-shell.desktop" "$STAGE/etc/xdg/autostart/aira-shell.desktop"
 install -Dm644 "$P/xdg/autostart/aira-services.desktop" "$STAGE/etc/xdg/autostart/aira-services.desktop"
 install -Dm644 "$P/xdg/autostart/aira-shell.desktop" "$STAGE/usr/share/applications/aira.desktop"
-sed -i '/^OnlyShowIn=/d;/^X-GNOME-Autostart/d' "$STAGE/usr/share/applications/aira.desktop"
+sed -i '/^OnlyShowIn=/d;/^X-GNOME-Autostart/d;/^X-KDE-autostart/d' "$STAGE/usr/share/applications/aira.desktop"
+for f in "$P"/applications/*.desktop; do install -Dm644 "$f" "$STAGE/usr/share/applications/$(basename "$f")"; done
+# Ctrl+Space: KDE's global shortcut daemon reads X-KDE-Shortcuts from desktop files in kglobalaccel/
+install -Dm644 "$P/applications/aira-ptt.desktop" "$STAGE/usr/share/kglobalaccel/aira-ptt.desktop"
 install -Dm644 "$P/branding/aira-icon.svg" "$STAGE/usr/share/icons/hicolor/scalable/apps/aira.svg"
 mkdir -p "$STAGE/usr/share/icons/hicolor/256x256/apps"
 rsvg-convert -w 256 -h 256 "$P/branding/aira-icon.svg" -o "$STAGE/usr/share/icons/hicolor/256x256/apps/aira.png"
@@ -81,7 +84,7 @@ Maintainer: AIRUX <airux@localhost>
 Installed-Size: $SIZE
 Depends: python3 (>= 3.13), python3-venv, libgomp1, adduser, systemd, polkitd | policykit-1, packagekit,
  chromium, pulseaudio-utils, libnotify-bin, poppler-utils, libsecret-tools, git, curl
-Recommends: aira-models-base (= $VERSION), xfce4-notifyd | notification-daemon, gnome-keyring, podman,
+Recommends: aira-models-base (= $VERSION), plasma-workspace | notification-daemon, gnome-keyring, podman,
  python3-notebook | jupyter-notebook
 Section: utils
 Priority: optional

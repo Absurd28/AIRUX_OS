@@ -5,7 +5,7 @@ GET  /events         server-sent events: transcript, agents, confirmations
 POST /command        {"text": ...}            run a typed command
 POST /confirm        {"id": ..., "yes": bool}  answer a pending confirmation
 POST /ptt/start      start push-to-talk recording;  POST /ptt/stop  stop and run it
-POST /ptt/toggle     start or stop (for an Xfce keyboard shortcut: aira-ptt)
+POST /ptt/toggle     start or stop (the global Ctrl+Space shortcut runs aira-ptt)
 
 Security: only 127.0.0.1; every POST needs the per-session token (X-AIRA-Token header), and the
 Host header must be exactly 127.0.0.1:<port>. A web page open in the AIRA browser therefore cannot
@@ -25,6 +25,8 @@ import time
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+
+from . import settings
 
 STATIC = Path(__file__).parent / "static"
 CONFIRM_TIMEOUT = 120.0
@@ -192,8 +194,9 @@ class Shell:
             def do_GET(self):
                 if not self._host_ok():
                     return self._send(403, b'{"error":"bad host"}')
-                if self.path == "/":
-                    page = (STATIC / "index.html").read_text().replace("__AIRA_TOKEN__", shell.token)
+                if self.path in ("/", "/settings"):
+                    name = "index.html" if self.path == "/" else "settings.html"
+                    page = (STATIC / name).read_text().replace("__AIRA_TOKEN__", shell.token)
                     return self._send(200, page.encode(), "text/html; charset=utf-8")
                 if self.path.startswith("/events"):
                     if not secrets.compare_digest(self.path.partition("token=")[2], shell.token):
@@ -236,6 +239,17 @@ class Shell:
                         return self._send(409, b'{"error":"busy"}')
                     shell.run_text(text)
                     return self._send(202, b'{"ok":true}')
+                if self.path == "/settings":
+                    if shell.orch is None:
+                        return self._send(503, b'{"error":"AIRA is not ready"}')
+                    try:
+                        if body.get("action") == "set":
+                            out = settings.apply(shell.orch, body, shell.voice)
+                        else:
+                            out = settings.state(shell.orch, shell.voice)
+                    except settings.SettingsError as exc:
+                        return self._send(400, json.dumps({"ok": False, "error": str(exc)}).encode())
+                    return self._send(200, json.dumps(out, default=str).encode())
                 if self.path == "/confirm":
                     ok = shell.answer(str(body.get("id", "")), bool(body.get("yes")))
                     return self._send(200 if ok else 404, json.dumps({"ok": ok}).encode())

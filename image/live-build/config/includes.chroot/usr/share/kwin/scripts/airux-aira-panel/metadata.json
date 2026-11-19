@@ -1,0 +1,14 @@
+{
+    "KPackageStructure": "KWin/Script",
+    "KPlugin": {
+        "Authors": [{ "Name": "AIRUX" }],
+        "Description": "Docks the AIRA window on the right edge of the screen, like a side panel",
+        "EnabledByDefault": true,
+        "Id": "airux-aira-panel",
+        "License": "MIT",
+        "Name": "AIRA side panel",
+        "Version": "0.1"
+    },
+    "X-Plasma-API": "javascript",
+    "X-Plasma-MainScript": "code/main.js"
+}

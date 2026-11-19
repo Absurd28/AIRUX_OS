@@ -1,0 +1,14 @@
+{
+    "KPackageStructure": "Plasma/LookAndFeel",
+    "KPlugin": {
+        "Authors": [{ "Name": "AIRUX" }],
+        "Category": "",
+        "Description": "AIRUX: Windows 11 style layout with a centred taskbar, dark theme and AIRA",
+        "Id": "org.airux.desktop",
+        "License": "MIT",
+        "Name": "AIRUX",
+        "Version": "0.1",
+        "Website": "https://github.com/Absurd28/AIRUX_OS"
+    },
+    "X-Plasma-APIVersion": "2"
+}

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1a2533"/><stop offset="1" stop-color="#0d1117"/>
+    </linearGradient>
+    <linearGradient id="fg" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7cc4ff"/><stop offset="1" stop-color="#59c38a"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="url(#bg)"/>
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="none" stroke="#2b3644" stroke-width="4"/>
+  <!-- code brackets -->
+  <path d="M84 76 L40 128 L84 180" fill="none" stroke="url(#fg)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M172 76 L216 128 L172 180" fill="none" stroke="url(#fg)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- AIRA's waveform between them -->
+  <path d="M96 132 C 106 132, 106 108, 116 108 S 126 156, 134 156 S 144 96, 152 96 S 158 132, 164 132"
+        fill="none" stroke="#e6e9ee" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -9,7 +9,7 @@
 [![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![llama.cpp](https://img.shields.io/badge/LLM-llama.cpp%20%C2%B7%20Qwen3.5-7cc4ff?style=for-the-badge)](https://github.com/ggml-org/llama.cpp)
 
-[![Tests](https://img.shields.io/badge/unit%20tests-231%20passing-59c38a?style=flat-square)](tests/unit)
+[![Tests](https://img.shields.io/badge/unit%20tests-233%20passing-59c38a?style=flat-square)](tests/unit)
 [![Eval](https://img.shields.io/badge/eval%20error%20rate-2.5%25%20of%20200-59c38a?style=flat-square)](docs/EVAL.md)
 [![Safety](https://img.shields.io/badge/unconfirmed%20risky%20actions-0-59c38a?style=flat-square)](docs/EVAL.md)
 [![Offline](https://img.shields.io/badge/runs-100%25%20offline-7cc4ff?style=flat-square)](docs/ARCHITECTURE.md)
@@ -57,16 +57,22 @@ prompts:
 | ⏰ **Reminders and briefing** | A reminder daemon gives desktop notifications and speaks them aloud. A login briefing covers today's events, due reminders and watched jobs; calendars import from .ics files. |
 | 🔬 **Research tools** | Search local notes and papers, summarise PDFs with citations, inspect datasets, run Jupyter notebooks, and search arXiv and the web (with your OK). |
 | 🐝 **Worker swarm** | Async workers for file search and fetching, a "pheromone board" that learns which approach works, and a load controller that adds or sheds agents with system pressure. |
-| 🖥️ **AIRA shell** | A full-screen Xfce companion showing the live transcript, active agents, pending confirmations and verified/unverified tags. Chromium is controlled through Playwright. |
+| 🪟 **Windows 11-style desktop** | KDE Plasma 6 laid out like Windows 11: a centred taskbar with a Start button, pinned apps and search, a File Explorer (Dolphin), a full Settings app (Wi-Fi, Bluetooth, display, sound, power, apps) and the shortcuts you know (Win, Win+E, Win+I, Win+D, Win+L, Win+arrows). |
+| 🖥️ **AIRA side panel** | AIRA docks on the right like Copilot: live transcript, active agents, pending confirmations and verified/unverified tags. Ctrl+Space talks to her from anywhere, and **AIRA Settings** covers voice, names, memory and privacy. Chromium is controlled through Playwright. |
+| 💻 **AIROX Code** | The AIRUX code editor: VSCodium (the open-source build of VS Code) with AIRA built in, like Copilot. It offers chat with cited sources, inline suggestions, edits applied only after review, commit messages and error explanations, all on the local model. |
 | 💿 **Real OS image** | A live ISO with AIRUX branding, a Plymouth splash and the Calamares installer. It is tested end to end in QEMU: boot, install, then AIRA answering by voice. |
 
 ## 📸 Screenshots
 
 <div align="center">
 
-| AIRA shell | Live desktop |
+| Desktop with AIRA docked | Start menu |
 | :---: | :---: |
-| <img src="docs/screenshots/phase7-shell.png" width="420"/> | <img src="docs/screenshots/vm-live-desktop.png" width="420"/> |
+| <img src="docs/screenshots/desktop-1-desktop.png" width="420"/> | <img src="docs/screenshots/desktop-2-start-menu.png" width="420"/> |
+| **File Explorer** | **AIROX Code** |
+| <img src="docs/screenshots/desktop-3-files.png" width="420"/> | <img src="docs/screenshots/desktop-5-airox-code.png" width="420"/> |
+| **Settings** | **AIRA Settings** |
+| <img src="docs/screenshots/desktop-4-settings.png" width="420"/> | <img src="docs/screenshots/desktop-6-aira-settings.png" width="420"/> |
 | **Installer finished** | **Installed system** |
 | <img src="docs/screenshots/vm-install-done.png" width="420"/> | <img src="docs/screenshots/vm-installed-desktop.png" width="420"/> |
 
@@ -77,7 +83,7 @@ prompts:
 | | Minimum | Recommended |
 | --- | --- | --- |
 | CPU | 64-bit x86 (amd64), 4 cores | 6+ cores |
-| Memory | 4 GB RAM (2B model) | 16 GB RAM, or a GPU with 6 GB or more (9B model) |
+| Memory | 8 GB RAM (2B model) | 16 GB RAM, or a GPU with 6 GB or more (9B model) |
 | Disk | 25 GB for an install | 40 GB or more |
 | Firmware | UEFI (Secure Boot can stay on) | UEFI |
 | Audio | speakers or headphones | plus a microphone for voice |
@@ -90,7 +96,7 @@ The model tier is picked automatically from total memory (RAM plus VRAM):
 
 ## 📦 Installation guide
 
-> **A prebuilt ISO is not published yet:** the image (3.76 GB) is larger than GitHub's 2 GB
+> **A prebuilt ISO is not published yet:** the image (4.4 GB) is larger than GitHub's 2 GB
 > limit for release files. Build it with [Build from source](#-build-from-source), then follow
 > these steps.
 
@@ -172,7 +178,7 @@ sudo apt install ./aira_0.1.0_amd64.deb ./aira-models-base_0.1.0_all.deb
 ```
 
 This installs AIRA's model services (`aira-llm`, `aira-embed`, `aira-stt`), the reminder daemon,
-the login briefing and the AIRA shell (autostarted in Xfce). Log out and back in, then run
+the login briefing and the AIRA side panel (autostarted at login). Log out and back in, then run
 `aira-shell`, or use `aira` in a terminal.
 
 ## 🛠️ Build from source
@@ -216,7 +222,7 @@ python3 scripts/fetch_models.py --only qwen3.5-2b     # or just what you need
 ```bash
 python3 -m venv /srv/airux-work/venv
 /srv/airux-work/venv/bin/pip install -r requirements.lock -r requirements-dev.lock
-/srv/airux-work/venv/bin/python -m pytest -q tests/unit        # 231 tests
+/srv/airux-work/venv/bin/python -m pytest -q tests/unit        # 233 tests
 ```
 
 **6. Build the packages and the ISO** (as root)
@@ -292,7 +298,8 @@ aira/            AIRA: orchestrator, agents, grounding guard, permission broker
   memory/        SQLCipher vault, embeddings, keys
   profiler/      hardware probe, tier and slot planning, server launch
   swarm/         worker pool, pheromone board, quorum, load controller
-  shell/         full-screen AIRA shell (HTTP + SSE, Chromium)
+  shell/         AIRA side panel and AIRA Settings (HTTP + SSE, Chromium)
+airox-code/      AIROX Code: the AIRA extension (chat, inline, reviewed edits) and branding
 image/           live-build configuration for the AIRUX ISO
 packaging/       systemd units, polkit rule, branding, Debian packaging
 scripts/         build llama.cpp / whisper.cpp, fetch models, build .deb and ISO, QEMU control
@@ -310,6 +317,8 @@ docs/            architecture, USB guide, demo, evaluation reports
 - [x] Worker swarm, research tools, browser control
 - [x] Bootable, installable ISO tested in QEMU
 - [x] 200-command evaluation
+- [x] Windows 11-style Plasma desktop with AIRA docked like Copilot
+- [x] AIROX Code: a VS Code-based editor with AIRA built in
 - [ ] Real-hardware validation across more laptops
 - [ ] "Hey AIRA" wake word (openWakeWord)
 - [ ] Optional NVIDIA driver in the image

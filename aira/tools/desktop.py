@@ -141,6 +141,20 @@ def _find_desktop_entry(name: str) -> Path | None:
     return None
 
 
+def _launch_command(entry: Path, target: str = "") -> list[str]:
+    """How to start a .desktop entry on this desktop: gtk-launch (GTK desktops), KDE's kioclient
+    (Plasma, which has no gtk-launch), or gio."""
+    extra = [target] if target else []
+    if shutil.which("gtk-launch"):
+        return ["gtk-launch", entry.stem] + extra
+    for kio in ("kioclient6", "kioclient"):
+        if shutil.which(kio):
+            return [kio, "exec", str(entry)] + extra
+    if shutil.which("gio"):
+        return ["gio", "launch", str(entry)] + extra
+    raise ToolError("no way to start applications here (gtk-launch, kioclient or gio is needed)")
+
+
 def open_app(name: str, target: str = "") -> dict:
     entry = _find_desktop_entry(name)
     exe = None if entry else shutil.which(name)
@@ -151,7 +165,7 @@ def open_app(name: str, target: str = "") -> dict:
         if tp is not None and not tp.exists():
             raise ToolError(f"no such file to open: {tp}")
     if entry is not None:
-        cmd = ["gtk-launch", entry.stem] + ([target] if target else [])
+        cmd = _launch_command(entry, target)
     else:
         cmd = [exe] + ([target] if target else [])
     proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)

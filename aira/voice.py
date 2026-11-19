@@ -30,7 +30,7 @@ from .tts import DEFAULT_VOICE, FEMALE_VOICES, PiperSpeaker, Speaker, choose_spe
 DIDNT_CATCH = "Sorry, I didn't catch that."
 # Words AIRUX users say that a general speech model mishears; passed to whisper as its prompt.
 VOCABULARY = ("AIRA, AIRUX, Neovim, Vim, VS Code, PyTorch, TensorFlow, NumPy, pandas, Jupyter, Podman, "
-              "Docker, Postgres, arXiv, LaTeX, git, GPU, CUDA, systemd, Debian, Xfce, venv, pytest. "
+              "Docker, Postgres, arXiv, LaTeX, git, GPU, CUDA, systemd, Debian, KDE, Plasma, Dolphin, venv, pytest. "
               "Files: notes.txt, demo.txt, report.pdf, data.csv, main.py, README.md.")
 # spoken file names: "demo dot txt", "demo, TXT", "demo.TXD" -> "demo.txt"
 EXTENSIONS = {"txt": "txt", "txd": "txt", "md": "md", "pdf": "pdf", "csv": "csv", "tsv": "tsv", "py": "py",

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Push-to-talk toggle for the AIRA shell; bound to a keyboard shortcut in Xfce.
+# Push-to-talk toggle for the AIRA shell; bound to Ctrl+Space (KDE global shortcut, aira-ptt.desktop).
 f="${XDG_STATE_HOME:-$HOME/.local/state}/aira/shell.token"
 [ -r "$f" ] || { echo "AIRA shell is not running" >&2; exit 1; }
 read -r port token < "$f"

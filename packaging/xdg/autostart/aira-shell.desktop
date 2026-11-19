@@ -1,9 +1,13 @@
 [Desktop Entry]
 Type=Application
 Name=AIRA
-Comment=AIRA, the Adaptive Intelligent Research Assistant (full-screen shell)
+GenericName=Voice assistant
+Comment=AIRA, the Adaptive Intelligent Research Assistant
 Exec=aira-shell
 Icon=aira
 Terminal=false
-OnlyShowIn=XFCE;
+Categories=Utility;
+Keywords=assistant;voice;ai;aira;
+StartupWMClass=chrome-127.0.0.1__-Default
 X-GNOME-Autostart-enabled=true
+X-KDE-autostart-phase=2

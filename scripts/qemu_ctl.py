@@ -81,7 +81,9 @@ def qga(d: Path, timeout: float = 30) -> Chan:
     return c
 
 
-def start(d: Path, iso: Path | None, disk: Path, boot: str, mem: int = 6144, cpus: int = 4) -> None:
+def start(d: Path, iso: Path | None, disk: Path, boot: str, mem: int = 5120, cpus: int = 4) -> None:
+    # 5 GB fits Plasma plus the 2B model; WSL has 9 GB and must keep room for itself and Windows.
+    # The balloon's free-page reporting hands memory the guest frees back to WSL.
     d.mkdir(parents=True, exist_ok=True)
     if not disk.exists():
         subprocess.run(["qemu-img", "create", "-f", "qcow2", str(disk), "40G"], check=True)
@@ -93,7 +95,7 @@ def start(d: Path, iso: Path | None, disk: Path, boot: str, mem: int = 6144, cpu
     cmd = ["qemu-system-x86_64", "-enable-kvm", "-machine", "q35", "-cpu", "host", "-m", str(mem), "-smp", str(cpus),
            "-drive", f"if=pflash,format=raw,readonly=on,file={OVMF_CODE}",
            "-drive", f"if=pflash,format=raw,file={vars_}",
-           "-drive", f"file={disk},if=virtio,format=qcow2",
+           "-drive", f"file={disk},if=virtio,format=qcow2,cache=none",
            "-netdev", "user,id=n0", "-device", "virtio-net-pci,netdev=n0",
            "-device", "qemu-xhci", "-device", "usb-tablet", "-device", "usb-kbd",
            "-vga", "none", "-device", f"virtio-vga,xres={SCREEN[0]},yres={SCREEN[1]}",
@@ -101,11 +103,12 @@ def start(d: Path, iso: Path | None, disk: Path, boot: str, mem: int = 6144, cpu
            "-device", "intel-hda", "-device", "hda-output,audiodev=snd0",
            "-chardev", f"socket,path={d / 'qga.sock'},server=on,wait=off,id=qga0",
            "-device", "virtio-serial", "-device", "virtserialport,chardev=qga0,name=org.qemu.guest_agent.0",
+           "-device", "virtio-balloon-pci,free-page-reporting=on",
            "-qmp", f"unix:{d / 'qmp.sock'},server=on,wait=off",
            "-display", "none", "-daemonize", "-pidfile", str(d / "qemu.pid"),
            "-serial", f"file:{d / 'serial.log'}"]
     if iso is not None and boot == "cd":
-        cmd += ["-drive", f"file={iso},media=cdrom,readonly=on,if=none,id=cd0",
+        cmd += ["-drive", f"file={iso},media=cdrom,readonly=on,if=none,id=cd0,cache=none",
                 "-device", "ide-cd,drive=cd0,bootindex=0"]
     subprocess.run(cmd, check=True)
     print(f"VM started ({boot}); pid {(d / 'qemu.pid').read_text().strip()}")

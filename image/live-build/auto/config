@@ -1,5 +1,5 @@
 #!/bin/sh
-# AIRUX 0.1 live image: Debian 13 (trixie), Xfce, Calamares, AIRA.
+# AIRUX 0.1 live image: Debian 13 (trixie), KDE Plasma 6 (Windows 11 layout), Calamares, AIRA.
 # Areas: main + non-free-firmware (real firmware for Wi-Fi, GPUs, CPUs). Not contrib: its firmware
 # *installer* packages (e.g. firmware-b43-installer) download blobs from third-party sites at build
 # time. The NVIDIA driver (non-free) is enabled after install (phase 9); the ISO is CPU-only.

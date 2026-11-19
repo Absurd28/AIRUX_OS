@@ -37,9 +37,10 @@ sed -i 's/^timeout 0$/timeout 50/' "$B/config/bootloaders/syslinux/syslinux.cfg"
 grep -q "set timeout=5" "$B/config/bootloaders/grub-pc/config.cfg"
 grep -q "timeout 50" "$B/config/bootloaders/syslinux/syslinux.cfg"
 
-echo "== AIRA packages"
+echo "== AIRA packages and AIROX Code"
 mkdir -p "$B/config/packages.chroot"
-cp "$WORK"/build/deb/aira_*_amd64.deb "$WORK"/build/deb/aira-models-base_*_all.deb "$B/config/packages.chroot/"
+cp "$WORK"/build/deb/aira_*_amd64.deb "$WORK"/build/deb/aira-models-base_*_all.deb \
+   "$WORK"/build/deb/airox-code_*_amd64.deb "$B/config/packages.chroot/"
 
 echo "== lb config and build (logs in $B/build.log)"
 lb config

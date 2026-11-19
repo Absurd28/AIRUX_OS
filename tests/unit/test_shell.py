@@ -211,3 +211,54 @@ def test_query_in_url():
     from aira.browser import query_in_url
     assert query_in_url("https://duckduckgo.com/?q=sparse+attention&ia=web", "Sparse attention")
     assert not query_in_url("https://duckduckgo.com/", "sparse attention")
+
+
+def test_settings_page_reads_and_changes_with_readback(running, home, monkeypatch):
+    monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
+    monkeypatch.delenv("AIRA_USER_NAMES", raising=False)
+    monkeypatch.delenv("AIRA_USER_NAME", raising=False)
+    sh, orch, executed = running([])
+    page = urllib.request.urlopen(f"http://127.0.0.1:{sh.port}/settings", timeout=5).read().decode()
+    assert "<title>AIRA Settings</title>" in page and sh.token in page
+    assert post(sh.port, "/settings", {"action": "get"}, "wrong")[0] == 403
+    code, s = post(sh.port, "/settings", {"action": "get"}, sh.token)
+    assert code == 200 and "Bella" in s["voice"]["choices"] and s["memory"]["min_mb"] == 64
+
+    code, r = post(sh.port, "/settings", {"action": "set", "what": "voice", "value": "Bella"}, sh.token)
+    assert code == 200 and r["ok"] and orch.vault.setting("voice") == "af_bella"
+    assert post(sh.port, "/settings", {"action": "set", "what": "voice", "value": "robot"}, sh.token)[0] == 400
+
+    code, r = post(sh.port, "/settings", {"action": "set", "what": "names", "value": ["Aryan", "boss"]}, sh.token)
+    assert code == 200 and r["ok"] and orch.persona.names == ["Aryan", "boss"]
+    assert (home / ".config" / "aira" / "aira.toml").read_text().strip() == 'names = ["Aryan", "boss"]'
+    assert post(sh.port, "/settings", {"action": "set", "what": "names", "value": ["<script>"]}, sh.token)[0] == 400
+
+    code, r = post(sh.port, "/settings", {"action": "set", "what": "memory_paused", "value": True}, sh.token)
+    assert r["ok"] and orch.vault.paused
+    post(sh.port, "/settings", {"action": "set", "what": "memory_paused", "value": False}, sh.token)
+    assert not orch.vault.paused
+
+    assert post(sh.port, "/settings", {"action": "set", "what": "quota_mb", "value": 32}, sh.token)[0] == 400
+    code, r = post(sh.port, "/settings", {"action": "set", "what": "quota_mb", "value": 128}, sh.token)
+    assert r["ok"] and orch.vault.quota == 128 * 1024 * 1024
+
+    code, r = post(sh.port, "/settings", {"action": "set", "what": "export", "value": True}, sh.token)
+    assert r["ok"] and Path(r["file"]).is_file() and Path(r["file"]).parent == home
+    assert post(sh.port, "/settings", {"action": "set", "what": "root_shell"}, sh.token)[0] == 400
+    assert executed == []   # settings never run AIRA's tools
+
+
+def test_open_app_launches_with_kde_when_gtk_launch_is_missing(monkeypatch, tmp_path):
+    from aira.tools import desktop
+    entry = tmp_path / "org.kde.dolphin.desktop"
+    entry.write_text("[Desktop Entry]\nName=Dolphin\nExec=dolphin\n")
+    have = {"kioclient6"}
+    monkeypatch.setattr(desktop.shutil, "which", lambda n: f"/usr/bin/{n}" if n in have else None)
+    assert desktop._launch_command(entry, "/tmp") == ["kioclient6", "exec", str(entry), "/tmp"]
+    have = {"gtk-launch", "kioclient6"}
+    assert desktop._launch_command(entry)[0] == "gtk-launch"
+    have = {"gio"}
+    assert desktop._launch_command(entry)[:2] == ["gio", "launch"]
+    have = set()
+    with pytest.raises(desktop.ToolError):
+        desktop._launch_command(entry)
