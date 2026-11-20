@@ -13,6 +13,15 @@ until (exec 3<>/dev/tcp/127.0.0.1/9050) 2>/dev/null; do
     i=$((i + 1)); [ "$i" -gt 60 ] && { notify "Tor did not come up on 127.0.0.1:9050."; exit 1; }
     sleep 0.5
 done
+# Tor accepts connections before it can carry them: on a live system it first downloads the
+# network's directory (seconds, sometimes minutes). A page asked for meanwhile can hang, so the
+# window opens once a request through Tor works.
+i=0
+until curl -sS -m 20 --socks5-hostname 127.0.0.1:9050 -o /dev/null https://check.torproject.org/api/ip 2>/dev/null; do
+    [ "$i" -eq 0 ] && notify "Connecting to the Tor network…"
+    i=$((i + 1)); [ "$i" -gt 24 ] && { notify "Tor could not connect to its network. Check the internet connection."; exit 1; }
+    sleep 3
+done
 dir=$(mktemp -d "${XDG_RUNTIME_DIR:-/tmp}/neox-tor.XXXXXX")
 trap 'rm -rf "$dir"' EXIT INT TERM
 /usr/lib/chromium/chromium \

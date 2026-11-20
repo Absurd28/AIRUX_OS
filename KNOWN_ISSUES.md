@@ -89,13 +89,41 @@ The phase each issue was found in is in brackets.
   basic store is obfuscated, not encrypted.
 - **The Tor window is not Tor Browser.** It sends traffic through Tor and leaves no profile behind,
   but it does not have Tor Browser's anti-fingerprinting. Tor starts only when a private window is
-  opened (it is off at boot), and starting it needs the desktop session (the `aira` group's polkit
+  opened (it is off at boot), and the window appears once Tor can carry traffic ("Connecting to
+  the Tor network…"; on the live system this can take from seconds to a few minutes), and starting it needs the desktop session (the `aira` group's polkit
   rule above).
 - **AIRA asks before opening web pages** (sending anything off the machine needs your OK), so
   "open the browser and search for X" shows a confirmation in AIRA's panel first.
 
 - **AIRA's side panel in NEOX opens with Ctrl+Shift+Y** or the AIRA button pinned in the toolbar.
   Chromium keeps Ctrl+Shift+A for its own tab search, and Alt+Shift+A did not reach NEOX in testing.
+
+## NEOX VPN
+
+- **Free means someone else's servers.** RiseupVPN is run by volunteers on donations: speeds vary,
+  and its places are only what Riseup offers (Paris, Amsterdam, Montreal and Miami in November
+  2026; the list changes). Some Riseup exit IPs are geolocated to another country than the gateway's city
+  (Amsterdam's often show as France), so websites may see a different country from the one picked.
+- **Tor is slow and some sites block it.** Connecting takes up to a minute; exits in small
+  countries may be few or none (connect then fails with Tor's reason).
+- **WireGuard needs your own provider.** NEOX VPN does not create accounts; it imports `.conf`
+  files you download from a provider (for example Proton VPN's free plan). Configs with
+  PostUp/PostDown/PreUp/PreDown are refused because they would run commands as root. WireGuard
+  hopping rotates through your imported configs. Tested in WSL against a local peer, not against a
+  commercial provider.
+- **Whole-computer mode has no kill switch.** If the VPN drops, other apps use the normal
+  connection until you reconnect. Only-NEOX mode does block (NEOX holds its pages back).
+- **Whole-computer Tor carries TCP and DNS only.** Other UDP and all IPv6 are blocked while it is
+  on (no leaks), so UDP apps such as games, some video calls and NTP time sync stop working until
+  you disconnect. LAN addresses stay direct.
+- **Changing place briefly interrupts Riseup and WireGuard** (a few seconds while the new tunnel
+  comes up; NEOX's pages wait in only-NEOX mode). Tor changes exit without a gap; open connections
+  keep their old exit until they close.
+- **Only-NEOX mode applies to NEOX's normal windows**, not its private Tor window (which already
+  uses Tor), and its SOCKS proxy at 10.218.0.2 can be used by any program on this computer.
+- **"Check my IP" asks ifconfig.co** (through the VPN when it is on), and each new Riseup tunnel
+  is tested with a TCP handshake to Quad9 (9.9.9.9) or Cloudflare (1.1.1.1) on port 443 through
+  the tunnel; Riseup gateways that accept a connection but reach nothing are skipped this way.
 
 ## Phagos (antivirus)
 

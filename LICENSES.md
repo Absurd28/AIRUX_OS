@@ -51,6 +51,17 @@ synthesis in a separate process as is done for Piper.
 | --- | --- | --- | --- |
 | Phagos (engines, rules, daemon, app) | AIRUX's antivirus | MIT, like the rest of AIRUX | this repository (phagos/) |
 
+## Networking
+
+| Component | Use | Licence | Source |
+| --- | --- | --- | --- |
+| NEOX VPN (neox-vpnd, VPN tab) | Free VPN in NEOX | MIT, like the rest of AIRUX | this repository (neox/vpn/) |
+| OpenVPN, NetworkManager-OpenVPN | Riseup tunnels | GPL-2.0 | Debian packages `openvpn`, `network-manager-openvpn` |
+| WireGuard tools | WireGuard tunnels | GPL-2.0 | Debian package `wireguard-tools` |
+| Tor | Tor backend and private windows | BSD-3-Clause | Debian package `tor` |
+| nftables | Tor whole-computer redirect | GPL-2.0 | Debian package `nftables` |
+| RiseupVPN service | Free VPN gateways (used, not shipped) | Riseup's terms of service, https://riseup.net/en/vpn | riseup.net |
+
 ## Firmware and drivers
 
 | Component | Use | Licence | Source |

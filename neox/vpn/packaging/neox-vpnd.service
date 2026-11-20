@@ -1,0 +1,19 @@
+[Unit]
+Description=NEOX VPN (free VPN for NEOX or the whole computer: Riseup, Tor, your own WireGuard)
+Documentation=file:///usr/share/doc/neox/README.vpn
+Wants=network-online.target
+After=network-online.target NetworkManager.service
+
+[Service]
+Type=simple
+ExecStart=/usr/sbin/neox-vpnd
+Restart=on-failure
+RestartSec=2
+RuntimeDirectory=neox-vpn
+RuntimeDirectoryMode=0755
+StateDirectory=neox-vpn
+# 0711: Tor (as debian-tor) reaches its own folder inside; the WireGuard and Riseup key folders stay private
+StateDirectoryMode=0711
+
+[Install]
+WantedBy=multi-user.target

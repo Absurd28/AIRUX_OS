@@ -73,16 +73,37 @@ done
 install -Dm644 "$N/branding/neox.svg" "$STAGE/usr/share/icons/hicolor/scalable/apps/neox.svg"
 install -m644 "$N/policies/neox.json" "$STAGE/etc/chromium/policies/managed/neox.json"
 install -m644 "$N/native/org.airux.neox.json" "$STAGE/etc/chromium/native-messaging-hosts/org.airux.neox.json"
+
+echo "== NEOX VPN (neox-vpnd)"
+install -d "$STAGE/usr/lib/neox/vpn" "$STAGE/usr/sbin" "$STAGE/usr/lib/systemd/system" "$STAGE/usr/share/polkit-1/actions"
+( cd "$N/vpn" && tar --exclude=__pycache__ --exclude='*.pyc' -cf - neox_vpn ) | tar -xf - -C "$STAGE/usr/lib/neox/vpn"
+install -m755 "$N/vpn/neox-vpn-up" "$STAGE/usr/lib/neox/vpn/"
+install -m755 "$N/vpn/packaging/neox-vpnd" "$STAGE/usr/sbin/"
+install -m644 "$N/vpn/packaging/neox-vpnd.service" "$STAGE/usr/lib/systemd/system/"
+install -m644 "$N/vpn/packaging/org.airux.neox.vpn.policy" "$STAGE/usr/share/polkit-1/actions/"
+python3 -I -c "import sys; sys.path.insert(0, sys.argv[1]); import neox_vpn.daemon, neox_vpn.upscript" "$STAGE/usr/lib/neox/vpn"
 cat > "$STAGE/usr/share/doc/neox/README" <<'DOC'
 NEOX is the AIRUX web browser: Debian's Chromium engine with NEOX's own profile, new tab page,
 AIRA side panel and privacy settings. Shields are uBlock Origin Lite (GPL-3.0,
 https://github.com/uBlockOrigin/uBOL-home). Private windows with Tor use Debian's tor package.
 DOC
+cat > "$STAGE/usr/share/doc/neox/README.vpn" <<'DOC'
+NEOX VPN (neox-vpnd): a free VPN in NEOX's side panel (Ctrl+Shift+Y, "VPN" tab).
+  Riseup      RiseupVPN (riseup.net): free, no account, run by volunteers on donations. Anonymous
+              certificates from Riseup's LEAP API; its CA is pinned by SHA-256.
+  Tor         a dedicated Tor instance (exit country chosen by you).
+  WireGuard   your own configs from a provider you signed up to (configs that run commands are refused).
+At connect you choose: only NEOX (the tunnel lives in the "neoxvpn" network namespace and NEOX uses
+it through a SOCKS proxy; if it drops, NEOX's pages stop instead of leaking) or the whole computer
+(NetworkManager for Riseup and WireGuard; an nftables transparent proxy for Tor).
+"Change country every x minutes" hops through the places you tick.
+Service: systemctl status neox-vpnd; API: /run/neox-vpn/vpn.sock; polkit action org.airux.neox.vpn.
+DOC
 
 echo "== package"
 chown -R root:root "$STAGE"
 install -d "$STAGE/DEBIAN"
-install -m755 "$N/debian/preinst" "$N/debian/postinst" "$N/debian/postrm" "$STAGE/DEBIAN/"
+install -m755 "$N/debian/preinst" "$N/debian/postinst" "$N/debian/prerm" "$N/debian/postrm" "$STAGE/DEBIAN/"
 cat > "$STAGE/DEBIAN/control" <<CTRL
 Package: neox
 Version: $VERSION
@@ -90,14 +111,17 @@ Section: web
 Priority: optional
 Architecture: all
 Maintainer: AIRUX <airux@localhost>
-Depends: chromium (>= 120), tor, aira, libnotify-bin
+Depends: chromium (>= 120), tor, tor-geoipdb, aira, libnotify-bin, python3 (>= 3.11), openvpn, wireguard-tools,
+ network-manager-openvpn, nftables, iproute2, curl, polkitd | policykit-1
 Installed-Size: $(du -sk "$STAGE" --exclude=DEBIAN | cut -f1)
 Homepage: https://github.com/Absurd28/AIRUX_OS
 Description: NEOX, the AIRUX web browser, with AIRA built in
  Chromium's engine with NEOX's own name, icon, theme, new tab page and private profile; Shields
  (uBlock Origin Lite); strict privacy defaults (HTTPS-only, third-party cookies blocked, no Google
  sync or telemetry, private search, Global Privacy Control); partial fingerprinting protection;
- private windows with Tor; and AIRA as a side panel who can also browse for you in NEOX.
+ private windows with Tor; AIRA as a side panel who can also browse for you in NEOX; and NEOX
+ VPN, a free VPN (Riseup, Tor or your own WireGuard) for NEOX alone or the whole computer, with
+ country hopping every few minutes.
 CTRL
 deb="$OUT/neox_${VERSION}_all.deb"
 dpkg-deb --build -Zxz "$STAGE" "$deb" >/dev/null

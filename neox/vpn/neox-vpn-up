@@ -1,0 +1,8 @@
+#!/bin/sh
+# OpenVPN's up-script in NEOX VPN's "only NEOX" mode: moves the tunnel into the neoxvpn namespace.
+# Lives next to the neox_vpn package (/usr/lib/neox/vpn).
+NEOX_VPN_LIB=$(dirname "$(readlink -f "$0")") exec /usr/bin/python3 -I -c '
+import os, sys
+sys.path.insert(0, os.environ["NEOX_VPN_LIB"])
+from neox_vpn.upscript import main
+sys.exit(main())'

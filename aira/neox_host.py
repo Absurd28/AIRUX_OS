@@ -6,7 +6,8 @@ It relays between the extension (stdin/stdout, Chrome's native-messaging framing
   - AIRA's model, for side-panel questions about the current page (aira.neox_qa: answer only from
     the page, quotes checked in code);
   - the AIRA shell, for "Ask AIRA" commands (posted to /command with the shell's token; AIRA's
-    replies and confirmation requests are relayed back).
+    replies and confirmation requests are relayed back);
+  - neox-vpnd, for the side panel's VPN tab (its socket judges this process by its uid and polkit).
 Nothing here listens on the network.
 """
 from __future__ import annotations
@@ -25,6 +26,23 @@ from . import neox_qa
 from .neox import read_native, socket_path, write_native
 
 MODEL = os.environ.get("AIRA_SERVER", "http://127.0.0.1:8080")
+VPN_SOCKET = Path(os.environ.get("NEOX_VPN_SOCKET", "/run/neox-vpn/vpn.sock"))
+VPN_METHODS = {"status", "providers", "connect", "disconnect", "import_wireguard", "remove_wireguard", "check_ip"}
+
+
+def vpn_request(method: str, params: dict, path: Path | None = None, timeout: float = 200) -> dict:
+    """One request to neox-vpnd (connecting through Tor can take a minute or two)."""
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    s.settimeout(timeout)
+    try:
+        s.connect(str(path or VPN_SOCKET))
+        s.sendall((json.dumps({"method": method, "params": params}) + "\n").encode())
+        data = s.makefile("rb").readline()
+    finally:
+        s.close()
+    if not data:
+        raise ConnectionError("neox-vpnd closed the connection")
+    return json.loads(data)
 
 
 class Host:
@@ -131,6 +149,18 @@ class Host:
                 break
         events.close()
 
+    # ---------------------------------------------------------- side panel: the VPN tab
+    def vpn(self, msg: dict) -> None:
+        method = msg.get("method")
+        if method not in VPN_METHODS:
+            out = {"ok": False, "error": f"unknown VPN request {method!r}"}
+        else:
+            try:
+                out = vpn_request(method, msg.get("params") or {})
+            except (OSError, ValueError):
+                out = {"ok": False, "error": "NEOX VPN's service (neox-vpnd) isn't running.", "service": False}
+        self.to_ext({"type": "vpn_result", "id": msg.get("id"), "method": method, **out})
+
     # ---------------------------------------------------------- main loop
     def run(self) -> None:
         threading.Thread(target=self._aira_loop, name="neox-host-aira", daemon=True).start()
@@ -146,6 +176,8 @@ class Host:
                 threading.Thread(target=self.ask_page, args=(msg,), daemon=True).start()
             elif t == "aira_command":
                 threading.Thread(target=self.aira_command, args=(msg,), daemon=True).start()
+            elif t == "vpn":
+                threading.Thread(target=self.vpn, args=(msg,), daemon=True).start()
 
 
 def main() -> int:

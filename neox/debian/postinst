@@ -4,6 +4,13 @@ if [ "$1" = configure ]; then
     # Tor runs only when a NEOX private window asks for it, not at every boot
     if [ -d /run/systemd/system ]; then systemctl disable --now tor.service >/dev/null 2>&1 || true
     else systemctl disable tor.service >/dev/null 2>&1 || true; fi
+    # NEOX VPN's service: idle until you connect from NEOX's side panel
+    if [ -d /run/systemd/system ]; then
+        systemctl daemon-reload || true
+        systemctl enable --now neox-vpnd.service >/dev/null 2>&1 || true
+    else
+        systemctl enable neox-vpnd.service >/dev/null 2>&1 || true
+    fi
     command -v update-desktop-database >/dev/null && update-desktop-database -q /usr/share/applications || true
     command -v gtk-update-icon-cache >/dev/null && gtk-update-icon-cache -q /usr/share/icons/hicolor || true
 fi

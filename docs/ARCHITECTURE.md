@@ -182,6 +182,28 @@ These hallucination controls are implemented in code, not only in prompts.
     side panel, and the bridge to AIRA.
   - **Private window with Tor:** `neox-private` starts `tor.service` on demand (polkit) and opens a
     throwaway profile through its SOCKS proxy.
+  - **NEOX VPN** (`neox-vpnd`, root service, `neox/vpn/`): the side panel's VPN tab talks to it
+    through the native host (`/run/neox-vpn/vpn.sock`; callers judged by SO_PEERCRED and polkit's
+    `org.airux.neox.vpn`, allowed for the person at the active desktop). One connection at a time:
+
+    ```text
+    VPN tab -> NEOX extension -> native host -> neox-vpnd
+      backend   Riseup (LEAP API: CA pinned by SHA-256, anonymous client certificate, OpenVPN)
+                Tor (its own instance; exit country via the control socket)
+                WireGuard (the user's own configs; PostUp/PostDown refused)
+      scope     only NEOX: tunnel interface moved into netns "neoxvpn" (its outer socket stays
+                outside), a SOCKS5 server inside (as nobody); NEOX sets chrome.proxy to it
+                whole computer: NetworkManager connection "NEOX VPN" (Riseup, WireGuard), or an
+                nftables table neox_vpn sending TCP to Tor's TransPort and DNS to its DNSPort
+      hopping   every x minutes (x >= 1) to the next ticked place, in order or at random
+    ```
+
+    Only-NEOX mode fails closed: the namespace has no route but the tunnel, and NEOX keeps its
+    proxy until the user turns the VPN off, so a dropped tunnel or service stops NEOX's pages
+    instead of sending them without the VPN. Every new Riseup tunnel must reach the internet (a TCP
+    handshake with 9.9.9.9 or 1.1.1.1 on port 443, through the tunnel) or the next gateway in the
+    same city is tried: one Riseup gateway accepted connections and answered pings but passed
+    nothing. After a hop, the SOCKS server restarts so NEOX drops connections into the old tunnel.
 - **Browser control:** in the desktop session AIRA browses in NEOX:
 
   ```text

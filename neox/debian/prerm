@@ -1,0 +1,7 @@
+#!/bin/sh
+set -e
+# NEOX VPN: disconnect (routes, namespace, firewall table) before the files go away
+if [ "$1" = remove ] && [ -d /run/systemd/system ]; then
+    systemctl disable --now neox-vpnd.service >/dev/null 2>&1 || true
+fi
+exit 0

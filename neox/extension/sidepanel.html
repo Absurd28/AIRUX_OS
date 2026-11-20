@@ -14,6 +14,7 @@
 <nav>
   <button id="tab-page" class="on">This page</button>
   <button id="tab-aira">Ask AIRA</button>
+  <button id="tab-vpn">VPN <i id="vpn-dot" class="dot"></i></button>
 </nav>
 <section id="page" class="on">
   <div class="quick">
@@ -29,6 +30,54 @@
   <div id="aira-log" class="log"></div>
   <form id="aira-form"><textarea id="aira-q" rows="2" placeholder="e.g. Search for Debian 13 release notes and open the first result"></textarea><button>Send</button></form>
   <p class="note">Commands go to AIRA's agents. She browses here in NEOX, and asks before anything risky.</p>
+</section>
+<section id="vpn">
+  <div class="scroll">
+  <div class="vpn-card" id="vpn-card">
+    <div class="vpn-head">
+      <span id="vpn-flag" class="flag">🌐</span>
+      <div><b id="vpn-title">VPN is off</b><small id="vpn-sub">Pick a VPN and a place, then connect.</small></div>
+      <span id="vpn-pill" class="pill">off</span>
+    </div>
+    <div id="vpn-meta" class="vpn-meta"></div>
+    <div id="vpn-held" class="warn" hidden>The VPN dropped. NEOX is holding pages back so nothing goes out without it.
+      <span class="row"><button id="vpn-again">Reconnect</button><button id="vpn-release">Turn the VPN off</button></span></div>
+  </div>
+  <div class="field"><span class="label">VPN</span>
+    <div class="seg" id="vpn-backend">
+      <button data-b="riseup" class="on">Riseup<small>free</small></button>
+      <button data-b="tor">Tor<small>free</small></button>
+      <button data-b="wireguard">My WireGuard<small>your provider</small></button>
+    </div>
+  </div>
+  <div class="field"><label class="label" for="vpn-place">Place</label><select id="vpn-place"><option>loading…</option></select></div>
+  <div class="field">
+    <label class="check"><input type="checkbox" id="vpn-hop"> Change country every
+      <input type="number" id="vpn-mins" min="1" max="1440" value="10"> minutes</label>
+    <div id="vpn-hop-opts" hidden>
+      <div id="vpn-places" class="places"></div>
+      <label class="check"><input type="checkbox" id="vpn-random"> In random order</label>
+    </div>
+  </div>
+  <div id="vpn-wg" class="field" hidden>
+    <span class="label">Your WireGuard configs</span>
+    <div id="vpn-wg-list" class="wg-list"></div>
+    <label class="file">＋ Import .conf files<input type="file" id="vpn-wg-file" accept=".conf,text/plain" multiple></label>
+  </div>
+  <div class="actions">
+    <button id="vpn-connect" class="primary">Connect</button>
+    <button id="vpn-disconnect" hidden>Disconnect</button>
+    <button id="vpn-ip">Check my IP</button>
+  </div>
+  <div id="vpn-scope" class="scope" hidden>
+    <span class="label">Use the VPN for</span>
+    <button data-s="neox"><b>🧭 Only NEOX</b><small>This browser's pages. Other apps keep their normal connection.</small></button>
+    <button data-s="system"><b>🖥️ Whole computer</b><small>Every app on AIRUX goes through the VPN.</small></button>
+    <button data-s="" class="link">Cancel</button>
+  </div>
+  <div id="vpn-err" class="msg error" hidden></div>
+  <p class="note" id="vpn-note"></p>
+  </div>
 </section>
 <script src="sidepanel.js"></script>
 </body>

@@ -299,9 +299,10 @@ PY""")["out"].strip()
     # started the way the Start menu starts apps (in the user's systemd manager, so polkit sees the
     # desktop session); a process from outside the session is refused, as it should be
     as_user(env, "systemd-run --user --collect neox-private")
-    tor_win = wait_window(env, r"(?i)tor", 180)
+    tor_win = wait_window(env, r"(?i)tor", 420)     # a fresh Tor first downloads the network's directory
     after = sh("systemctl is-active tor.service")["out"].strip()
-    print(f"Tor before: {before}; after opening a private window: {after}; window: {tor_win}")
+    boot = sh("journalctl -b -u tor@default -o cat --no-pager | grep Bootstrapped | tail -1")["out"].strip()
+    print(f"Tor before: {before}; after opening a private window: {after} ({boot}); window: {tor_win}")
     r["tor"] = before[:1] == ["disabled"] and after == "active" and bool(tor_win)
     vm.shot(D, D / "desktop-9-neox-tor.png")
 

@@ -34,3 +34,5 @@ form input { flex: 1; font: inherit; font-size: 17px; padding: 12px 0; backgroun
 .sites a span:last-child { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .shields { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 8px; }
 .shields span { font-size: 12px; padding: 5px 11px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); color: var(--muted); }
+.shields span.on { color: var(--b); border-color: color-mix(in srgb, var(--b) 50%, var(--line)); }
+.shields span.bad { color: #ff7a85; }

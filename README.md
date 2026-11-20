@@ -60,7 +60,7 @@ prompts:
 | 🪟 **Windows 11-style desktop** | KDE Plasma 6 laid out like Windows 11: a centred taskbar with a Start button, pinned apps and search, a File Explorer (Dolphin), a full Settings app (Wi-Fi, Bluetooth, display, sound, power, apps) and the shortcuts you know (Win, Win+E, Win+I, Win+D, Win+L, Win+arrows). |
 | 🖥️ **AIRA side panel** | AIRA docks on the right like Copilot: live transcript, active agents, pending confirmations and verified/unverified tags. Ctrl+Space talks to her from anywhere, and **AIRA Settings** covers voice, names, memory and privacy. |
 | 💻 **AIROX Code** | The AIRUX code editor: VSCodium (the open-source build of VS Code) with AIRA built in, like Copilot, and a look of its own (*Midnight Glass*: floating rounded panels, pill tabs, a top activity bar and an **AIRA Home** start page). It offers chat with cited sources, inline suggestions, edits applied only after review, commit messages and error explanations, all on the local model. |
-| 🌐 **NEOX browser** | The AIRUX browser, built on Chromium's engine with Brave-style protection: **Shields** (uBlock Origin Lite), strict privacy defaults (HTTPS-only, third-party cookies blocked, no telemetry, DuckDuckGo), **Global Privacy Control**, fingerprinting protection, and a **private window with Tor**. AIRA browses in it: say *"open the browser and search for X"*, or ask about the page you're reading in NEOX's AIRA side panel, where answers must quote the page. |
+| 🌐 **NEOX browser** | The AIRUX browser, built on Chromium's engine with Brave-style protection: **Shields** (uBlock Origin Lite), strict privacy defaults (HTTPS-only, third-party cookies blocked, no telemetry, DuckDuckGo), **Global Privacy Control**, fingerprinting protection, a **private window with Tor**, and **NEOX VPN**: a free VPN (RiseupVPN, Tor, or your own WireGuard) for NEOX alone or the whole computer, chosen when you connect, that can change country every *x* minutes. AIRA browses in it: say *"open the browser and search for X"*, or ask about the page you're reading in NEOX's AIRA side panel, where answers must quote the page. |
 | 🦠 **Phagos antivirus** | AIRUX's own antivirus, designed like an immune system: real-time protection (files are checked as they are written, and malicious programs are not allowed to start), in-house signature rules, **Negative Selection** and **Clonal Selection** (artificial immune system) and the **Dendritic Cell Algorithm** from Danger Theory, which pauses a program that starts encrypting your files and lets you decide. Quarantine, scans, protection history and a Windows Security-style app; ask AIRA "is my computer protected?" |
 | 🧩 **AIRUX Drivers** | Like Windows' Device Manager: shows whether Wi-Fi, Ethernet, Bluetooth, graphics, sound, camera, touchpad and battery work, and why a part does not (missing firmware, switched off, no driver). One click installs the fix, including **NVIDIA's driver** with the Secure Boot key step. It also does device firmware updates (fwupd) and saves a hardware report. The ISO ships Debian's firmware for Wi-Fi, Bluetooth, GPUs and laptop audio. Ask AIRA "why isn't my Wi-Fi working?" |
 | 🎮 **Offline games** | Chess against Stockfish (Knights), Sudoku, Solitaire, Mahjongg, Minesweeper, Reversi, Four in a Row, Gomoku, nonograms, falling blocks, Breakout and more from KDE, plus **AIRUX Snake**, our own take on the classic snake game. All of them work without internet. |
@@ -320,6 +320,7 @@ airox-code/      AIROX Code: the AIRA extension (chat, inline, reviewed edits, A
 drivers/         AIRUX Drivers: hardware inventory and diagnosis, root helper, app
 phagos/          Phagos antivirus: engines (rules, NSA, CLONALG, DCA), daemon, agent, app, rules
 neox/            NEOX browser: extension (AIRA bridge, side panel, new tab, privacy), launchers, policies
+neox/vpn/        NEOX VPN: neox-vpnd (Riseup, Tor, WireGuard; only-NEOX namespace or whole computer; hopping)
 image/           live-build configuration for the AIRUX ISO
 packaging/       systemd units, polkit rule, branding, Debian packaging
 scripts/         build llama.cpp / whisper.cpp, fetch models, build .deb and ISO, QEMU control
@@ -340,6 +341,7 @@ docs/            architecture, USB guide, demo, evaluation reports
 - [x] Windows 11-style Plasma desktop with AIRA docked like Copilot
 - [x] AIROX Code: a VS Code-based editor with AIRA built in, with its own Midnight Glass look
 - [x] NEOX: a Chromium-based private browser with Shields, Tor windows and AIRA built in
+- [x] NEOX VPN: free VPN (Riseup, Tor, your WireGuard) for NEOX or the whole computer, with country hopping
 - [x] Phagos: an in-house antivirus built on artificial immune systems and Danger Theory
 - [x] AIRUX Drivers: firmware for real hardware, NVIDIA driver installs, hardware diagnosis
 - [ ] Real-hardware validation across more laptops

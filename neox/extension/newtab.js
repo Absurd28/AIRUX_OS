@@ -38,4 +38,13 @@ chrome.topSites.get((sites) => {
 
 chrome.runtime.sendMessage({ type: "status" }, (r) => {
   $("aira-state").textContent = r && r.aira ? "🤖 AIRA is ready (Ctrl+Shift+Y)" : "🤖 AIRA is offline";
+  const c = r && r.vpn && r.vpn.connection;
+  if (c) {
+    const where = c.city || (c.country && c.country !== "ANY" ? c.country : "any country");
+    $("vpn-state").textContent = `🔐 VPN on · ${where} · ${c.scope === "neox" ? "only NEOX" : "whole computer"}`;
+    $("vpn-state").classList.add("on");
+  } else if (r && r.vpn && r.vpn.held) {
+    $("vpn-state").textContent = "⛔ VPN dropped · pages held back";
+    $("vpn-state").classList.add("bad");
+  }
 });

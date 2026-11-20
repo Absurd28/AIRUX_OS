@@ -63,6 +63,12 @@ xdg-user-dirs
 systemsettings
 kinfocenter
 network-manager
+# NEOX VPN (Riseup over OpenVPN, your WireGuard, Tor's transparent proxy)
+network-manager-openvpn
+openvpn
+wireguard-tools
+nftables
+tor-geoipdb
 plasma-nm
 plasma-pa
 bluez

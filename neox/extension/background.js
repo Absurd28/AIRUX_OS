@@ -21,6 +21,7 @@ function connectHost() {
   });
   retryMs = 1000;
   broadcast({ type: "status", aira: true });
+  vpnRequest("status", {}).catch(() => {});
 }
 function scheduleReconnect() { setTimeout(connectHost, retryMs); retryMs = Math.min(retryMs * 2, 30000); }
 function send(msg) { if (port) port.postMessage(msg); }
@@ -114,7 +115,78 @@ async function doCommand(c) {
   throw new Error("unknown command " + c.cmd);
 }
 
+// ---------------------------------------------------------------- NEOX VPN
+// The service (neox-vpnd) runs the tunnel; in "only NEOX" mode this browser reaches it through a
+// SOCKS proxy. Kill switch: once you connect, NEOX keeps that proxy until *you* turn the VPN off, so
+// if the tunnel or the service drops, pages stop loading instead of going out without the VPN.
+let vpnState = null;                  // the last status from neox-vpnd
+let vpnSeq = 0;
+const vpnWaiters = new Map();
+
+function vpnCall(method, params = {}) {
+  return new Promise((resolve) => {
+    if (!port) return resolve({ ok: false, error: "NEOX's helper isn't running.", service: false });
+    const id = "v" + (++vpnSeq);
+    vpnWaiters.set(id, resolve);
+    send({ type: "vpn", id, method, params });
+  });
+}
+
+async function setProxy(p) {
+  if (p) {
+    await chrome.proxy.settings.set({ scope: "regular", value: { mode: "fixed_servers",
+      rules: { singleProxy: { scheme: p.scheme, host: p.host, port: p.port }, bypassList: ["localhost", "127.0.0.1", "[::1]"] } } });
+  } else {
+    await chrome.proxy.settings.clear({ scope: "regular" });
+  }
+}
+
+async function applyVpn(st) {
+  const { vpnHold } = await chrome.storage.local.get("vpnHold");
+  const c = st && st.ok !== false ? st.connection : null;
+  if (c && c.scope === "neox") {
+    const p = c.proxy || vpnHold;                          // still connecting the first time: no proxy yet
+    if (p) {
+      await chrome.storage.local.set({ vpnHold: p });       // remembered for the kill switch
+      await setProxy(p);
+    }
+  } else if (c) {                                           // whole computer: no proxy needed
+    await chrome.storage.local.remove("vpnHold");
+    await setProxy(null);
+  } else if (vpnHold) {
+    await setProxy(vpnHold);                                // dropped: keep blocking until you say otherwise
+  } else {
+    await setProxy(null);
+  }
+  vpnState = { ...(st || {}), held: !c && !!vpnHold };
+  broadcast({ type: "vpn_state", state: vpnState });
+}
+
+async function vpnRequest(method, params) {
+  const r = await vpnCall(method, params);
+  if (method === "disconnect" && r.ok) await chrome.storage.local.remove("vpnHold");
+  if ("connected" in r || r.service === false) {
+    await applyVpn(r);
+    return { ...r, held: vpnState.held };            // the panel shows the kill switch too
+  }
+  return r;
+}
+
+async function vpnRelease() {           // "Turn off" while the VPN is down: stop blocking
+  await chrome.storage.local.remove("vpnHold");
+  await vpnCall("disconnect");
+  await applyVpn(await vpnCall("status"));
+}
+
+setInterval(() => { if (port) vpnRequest("status", {}).catch(() => {}); }, 10000);
+
 async function onHostMessage(m) {
+  if (m.type === "vpn_result") {
+    const w = vpnWaiters.get(m.id);
+    vpnWaiters.delete(m.id);
+    if (w) w(m);
+    return;
+  }
   if (m.type === "command") {           // from AIRA's agents
     try { send({ type: "result", id: m.id, ok: true, value: await doCommand(m) }); }
     catch (e) { send({ type: "result", id: m.id, ok: false, error: String(e && e.message || e) }); }
@@ -130,7 +202,12 @@ chrome.runtime.onConnect.addListener((p) => {
   panels.add(p);
   p.postMessage({ type: "status", aira: !!port });
   p.onDisconnect.addListener(() => panels.delete(p));
+  if (vpnState) p.postMessage({ type: "vpn_state", state: vpnState });
   p.onMessage.addListener(async (m) => {
+    if (m.type === "vpn") {
+      const r = m.method === "release" ? (await vpnRelease(), { ok: true }) : await vpnRequest(m.method, m.params || {});
+      return p.postMessage({ ...r, type: "vpn_result", id: m.id });
+    }
     if (!port) return p.postMessage({ type: "error", id: m.id, text: "AIRA isn't reachable. Is AIRA running?" });
     if (m.type === "ask_page") {
       try {
@@ -152,7 +229,7 @@ chrome.runtime.onMessage.addListener((m, _sender, reply) => {
     chrome.windows.getLastFocused().then((w) => chrome.sidePanel.open({ windowId: w.id })).then(() => reply(true), () => reply(false));
     return true;
   }
-  if (m && m.type === "status") { reply({ aira: !!port }); return false; }
+  if (m && m.type === "status") { reply({ aira: !!port, vpn: vpnState }); return false; }
 });
 
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
