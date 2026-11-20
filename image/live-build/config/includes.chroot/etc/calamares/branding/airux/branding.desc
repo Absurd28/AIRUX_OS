@@ -17,8 +17,8 @@ strings:
     knownIssuesUrl:      file:///usr/share/doc/aira/README.md
     releaseNotesUrl:     file:///usr/share/doc/aira/README.md
 images:
-    productLogo:         "aira-logo.png"
-    productIcon:         "aira-logo.png"
+    productLogo:         "airux-logo.png"
+    productIcon:         "airux-logo.png"
     productWelcome:      "welcome.png"
 slideshow:               "show.qml"
 style:

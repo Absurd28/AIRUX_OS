@@ -37,5 +37,5 @@ chrome.topSites.get((sites) => {
 });
 
 chrome.runtime.sendMessage({ type: "status" }, (r) => {
-  $("aira-state").textContent = r && r.aira ? "🤖 AIRA is ready (Ctrl+Shift+A)" : "🤖 AIRA is offline";
+  $("aira-state").textContent = r && r.aira ? "🤖 AIRA is ready (Ctrl+Shift+Y)" : "🤖 AIRA is offline";
 });

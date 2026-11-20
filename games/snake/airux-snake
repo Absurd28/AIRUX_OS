@@ -1,0 +1,7 @@
+#!/bin/sh
+# AIRUX Snake: an offline game, shown in a Chromium app window (no tabs, no address bar, no network
+# needed). Its best scores live in its own small profile.
+profile="${XDG_DATA_HOME:-$HOME/.local/share}/airux-snake"
+exec chromium --app="file:///usr/share/airux/games/snake/index.html" --class=airux-snake \
+    --window-size=780,720 --no-first-run --noerrdialogs --password-store=basic \
+    --user-data-dir="$profile" "$@"

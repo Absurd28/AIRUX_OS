@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=AIRUX Snake
+GenericName=Snake game
+Comment=Steer the snake, eat the dots, grow longer
+Exec=airux-snake
+Icon=airux-snake
+Terminal=false
+Categories=Game;ArcadeGame;
+Keywords=snake;arcade;game;retro;
+StartupWMClass=airux-snake

@@ -156,4 +156,9 @@ chrome.runtime.onMessage.addListener((m, _sender, reply) => {
 });
 
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
+// Alt+Shift+A: the action's own shortcut does not open a side panel, so the command opens it. Called
+// straight away in the handler (no await first): a keyboard shortcut counts as the user's gesture.
+chrome.commands.onCommand.addListener((command, tab) => {
+  if (command === "open-aira" && tab) chrome.sidePanel.open({ windowId: tab.windowId }).catch(() => {});
+});
 connectHost();

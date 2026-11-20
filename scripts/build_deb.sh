@@ -67,11 +67,32 @@ install -Dm644 "$P/xdg/autostart/aira-services.desktop" "$STAGE/etc/xdg/autostar
 install -Dm644 "$P/xdg/autostart/aira-shell.desktop" "$STAGE/usr/share/applications/aira.desktop"
 sed -i '/^OnlyShowIn=/d;/^X-GNOME-Autostart/d;/^X-KDE-autostart/d' "$STAGE/usr/share/applications/aira.desktop"
 for f in "$P"/applications/*.desktop; do install -Dm644 "$f" "$STAGE/usr/share/applications/$(basename "$f")"; done
+# AIRUX Snake (offline game, games/snake): rules tested with a Node runtime when one is around
+# (AIROX Code's Electron, staged by build_airox.sh), then installed
+G="$REPO/games/snake"
+ELECTRON_NODE="$WORK/build/deb/airox-code/usr/share/airox-code/codium"
+if command -v node >/dev/null; then node --test "$G"/test/*.test.js
+elif [ -x "$ELECTRON_NODE" ]; then ELECTRON_RUN_AS_NODE=1 "$ELECTRON_NODE" --test "$G"/test/*.test.js
+else echo "AIRUX Snake: no Node runtime here, rules tests skipped"; fi
+install -Dm644 "$G/index.html" "$STAGE/usr/share/airux/games/snake/index.html"
+install -Dm644 "$G/snake-core.js" "$STAGE/usr/share/airux/games/snake/snake-core.js"
+install -Dm755 "$G/airux-snake" "$STAGE/usr/bin/airux-snake"
+install -Dm644 "$G/airux-snake.desktop" "$STAGE/usr/share/applications/airux-snake.desktop"
+install -Dm644 "$G/airux-snake.svg" "$STAGE/usr/share/icons/hicolor/scalable/apps/airux-snake.svg"
+install -d "$STAGE/usr/share/icons/hicolor/256x256/apps"
+rsvg-convert -w 256 -h 256 "$G/airux-snake.svg" -o "$STAGE/usr/share/icons/hicolor/256x256/apps/airux-snake.png"
 # Ctrl+Space: KDE's global shortcut daemon reads X-KDE-Shortcuts from desktop files in kglobalaccel/
 install -Dm644 "$P/applications/aira-ptt.desktop" "$STAGE/usr/share/kglobalaccel/aira-ptt.desktop"
 install -Dm644 "$P/branding/aira-icon.svg" "$STAGE/usr/share/icons/hicolor/scalable/apps/aira.svg"
 mkdir -p "$STAGE/usr/share/icons/hicolor/256x256/apps"
 rsvg-convert -w 256 -h 256 "$P/branding/aira-icon.svg" -o "$STAGE/usr/share/icons/hicolor/256x256/apps/aira.png"
+# the AIRUX logo (Wave-A): Start button, About page (os-release LOGO=airux), user picture
+install -Dm644 "$P/branding/airux-logo.svg" "$STAGE/usr/share/icons/hicolor/scalable/apps/airux.svg"
+for s in 16 22 24 32 48 64 128 256; do
+    install -d "$STAGE/usr/share/icons/hicolor/${s}x${s}/apps"
+    rsvg-convert -w $s -h $s "$P/branding/airux-logo.svg" -o "$STAGE/usr/share/icons/hicolor/${s}x${s}/apps/airux.png"
+done
+install -Dm644 "$P/branding/airux-logo-wordmark.svg" "$STAGE/usr/share/airux/airux-logo-wordmark.svg"
 install -Dm644 "$REPO/README.md" "$STAGE/usr/share/doc/aira/README.md"
 install -Dm644 "$REPO/LICENSES.md" "$STAGE/usr/share/doc/aira/LICENSES.md"
 for s in postinst prerm postrm; do install -m755 "$P/debian/$s" "$STAGE/DEBIAN/$s"; done

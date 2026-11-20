@@ -1,0 +1,10 @@
+# AIRUX: Knights defaults to you (white) against Stockfish, the engine AIRUX ships.
+# Keys from Knights' own schema (/usr/share/config.kcfg/knights.kcfg, group "Protocols").
+[Protocols]
+player1Protocol=Local
+player2Protocol=XBoard
+color=White
+programs=/usr/games/stockfish
+player1Program=Stockfish
+player2Program=Stockfish
+engineConfigurations=Stockfish:/usr/games/stockfish:uci

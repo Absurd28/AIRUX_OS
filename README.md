@@ -9,7 +9,7 @@
 [![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![llama.cpp](https://img.shields.io/badge/LLM-llama.cpp%20%C2%B7%20Qwen3.5-7cc4ff?style=for-the-badge)](https://github.com/ggml-org/llama.cpp)
 
-[![Tests](https://img.shields.io/badge/unit%20tests-233%20passing-59c38a?style=flat-square)](tests/unit)
+[![Tests](https://img.shields.io/badge/unit%20tests-249%20passing-59c38a?style=flat-square)](tests/unit)
 [![Eval](https://img.shields.io/badge/eval%20error%20rate-2.5%25%20of%20200-59c38a?style=flat-square)](docs/EVAL.md)
 [![Safety](https://img.shields.io/badge/unconfirmed%20risky%20actions-0-59c38a?style=flat-square)](docs/EVAL.md)
 [![Offline](https://img.shields.io/badge/runs-100%25%20offline-7cc4ff?style=flat-square)](docs/ARCHITECTURE.md)
@@ -61,21 +61,29 @@ prompts:
 | 🖥️ **AIRA side panel** | AIRA docks on the right like Copilot: live transcript, active agents, pending confirmations and verified/unverified tags. Ctrl+Space talks to her from anywhere, and **AIRA Settings** covers voice, names, memory and privacy. |
 | 💻 **AIROX Code** | The AIRUX code editor: VSCodium (the open-source build of VS Code) with AIRA built in, like Copilot, and a look of its own (*Midnight Glass*: floating rounded panels, pill tabs, a top activity bar and an **AIRA Home** start page). It offers chat with cited sources, inline suggestions, edits applied only after review, commit messages and error explanations, all on the local model. |
 | 🌐 **NEOX browser** | The AIRUX browser, built on Chromium's engine with Brave-style protection: **Shields** (uBlock Origin Lite), strict privacy defaults (HTTPS-only, third-party cookies blocked, no telemetry, DuckDuckGo), **Global Privacy Control**, fingerprinting protection, and a **private window with Tor**. AIRA browses in it: say *"open the browser and search for X"*, or ask about the page you're reading in NEOX's AIRA side panel, where answers must quote the page. |
+| 🎮 **Offline games** | Chess against Stockfish (Knights), Sudoku, Solitaire, Mahjongg, Minesweeper, Reversi, Four in a Row, Gomoku, nonograms, falling blocks, Breakout and more from KDE, plus **AIRUX Snake**, our own take on the classic snake game. All of them work without internet. |
 | 💿 **Real OS image** | A live ISO with AIRUX branding, a Plymouth splash and the Calamares installer. It is tested end to end in QEMU: boot, install, then AIRA answering by voice. |
 
 ## 📸 Screenshots
+
+Every screenshot is the live ISO running in QEMU, taken by `tests/screenshot_tour.py`: AIRA's answers
+come from the real local model (the 2B tier, on 4 CPU cores), and pages are real pages.
 
 <div align="center">
 
 | Desktop with AIRA docked | Start menu |
 | :---: | :---: |
-| <img src="docs/screenshots/desktop-1-desktop.png" width="420"/> | <img src="docs/screenshots/desktop-2-start-menu.png" width="420"/> |
-| **File Explorer** | **AIROX Code** |
-| <img src="docs/screenshots/desktop-3-files.png" width="420"/> | <img src="docs/screenshots/desktop-5-airox-code.png" width="420"/> |
-| **NEOX with AIRA's side panel** | **AIRA searching in NEOX** |
-| <img src="docs/screenshots/neox-sidepanel.png" width="420"/> | <img src="docs/screenshots/desktop-8-aira-in-neox.png" width="420"/> |
-| **Settings** | **AIRA Settings** |
-| <img src="docs/screenshots/desktop-4-settings.png" width="420"/> | <img src="docs/screenshots/desktop-6-aira-settings.png" width="420"/> |
+| <img src="docs/screenshots/tour-01-desktop.png" width="420"/> | <img src="docs/screenshots/tour-02-start-menu.png" width="420"/> |
+| **AIRA answering from a tool, not a guess** | **AIROX Code: AIRA finds the bug (her line number was off, so her answer is tagged unverified)** |
+| <img src="docs/screenshots/tour-03-aira-answers.png" width="420"/> | <img src="docs/screenshots/tour-04-airox-code-aira.png" width="420"/> |
+| **NEOX: AIRA summarizes the page, quoting it** | **"Open the browser and search for…": AIRA drives NEOX** |
+| <img src="docs/screenshots/tour-05-neox-aira-panel.png" width="420"/> | <img src="docs/screenshots/tour-06-aira-browses-neox.png" width="420"/> |
+| **Chess against Stockfish (Knights)** | **Sudoku (KSudoku)** |
+| <img src="docs/screenshots/tour-07-chess.png" width="420"/> | <img src="docs/screenshots/tour-08-sudoku.png" width="420"/> |
+| **AIRUX Snake** | **File Explorer** |
+| <img src="docs/screenshots/tour-09-snake.png" width="420"/> | <img src="docs/screenshots/tour-10-files.png" width="420"/> |
+| **About this System** | **The installer** |
+| <img src="docs/screenshots/tour-11-about.png" width="420"/> | <img src="docs/screenshots/tour-12-installer.png" width="420"/> |
 | **Installer finished** | **Installed system** |
 | <img src="docs/screenshots/vm-install-done.png" width="420"/> | <img src="docs/screenshots/vm-installed-desktop.png" width="420"/> |
 

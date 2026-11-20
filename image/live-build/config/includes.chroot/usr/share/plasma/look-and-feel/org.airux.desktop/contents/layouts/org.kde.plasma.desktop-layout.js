@@ -20,7 +20,7 @@ panel.addWidget("org.kde.plasma.panelspacer");
 
 var start = panel.addWidget("org.kde.plasma.kickoff");
 start.currentConfigGroup = ["General"];
-start.writeConfig("icon", "aira");
+start.writeConfig("icon", "airux");   // the AIRUX logo, like Windows' Start
 // pinned Start apps: Kickoff's default list is set in the image (see 9000-airux.hook.chroot)
 start.writeConfig("primaryActions", "0");     // Start menu: apps first, power buttons at the bottom
 start.writeConfig("showActionButtonCaptions", "false");

@@ -25,7 +25,10 @@ rsvg-convert -w 1920 -h 1080 "$BR/airux-splash.svg" -o "$inc/usr/share/plymouth/
 rsvg-convert -w 18 -h 18 "$BR/plymouth/airux/dot.svg" -o "$inc/usr/share/plymouth/themes/airux/dot.png"
 cp "$BR/plymouth/airux/airux.plymouth" "$BR/plymouth/airux/airux.script" "$inc/usr/share/plymouth/themes/airux/"
 cal="$inc/etc/calamares/branding/airux"
-rsvg-convert -w 128 -h 128 "$BR/aira-icon.svg" -o "$cal/aira-logo.png"
+rsvg-convert -w 128 -h 128 "$BR/airux-logo.svg" -o "$cal/airux-logo.png"
+# the default user picture (login, lock screen, Start menu header): the AIRUX logo, not Debian's swirl
+mkdir -p "$inc/etc/skel"
+rsvg-convert -w 256 -h 256 "$BR/airux-logo.svg" -o "$inc/etc/skel/.face.icon"
 rsvg-convert -w 640 -h 360 "$BR/airux-splash.svg" -o "$cal/welcome.png"
 
 echo "== boot menus: AIRUX splash and title, 5 s timeout (live-build's defaults wait forever)"

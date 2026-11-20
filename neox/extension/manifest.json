@@ -13,7 +13,7 @@
   "side_panel": { "default_path": "sidepanel.html" },
   "action": { "default_title": "Ask AIRA about this page", "default_icon": { "16": "icons/aira-16.png", "32": "icons/aira-32.png" } },
   "commands": {
-    "_execute_action": { "suggested_key": { "default": "Ctrl+Shift+A" }, "description": "Open AIRA" }
+    "open-aira": { "suggested_key": { "default": "Ctrl+Shift+Y" }, "description": "Open AIRA's side panel" }
   },
   "declarative_net_request": {
     "rule_resources": [{ "id": "gpc", "enabled": true, "path": "rules/gpc.json" }]

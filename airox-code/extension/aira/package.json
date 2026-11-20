@@ -15,6 +15,12 @@
   ],
   "icon": "media/aira.png",
   "main": "./extension.js",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true,
+      "description": "AIRA only reads files and proposes edits that you accept or reject; she never runs code, tasks or settings from the folder."
+    }
+  },
   "activationEvents": [
     "onStartupFinished"
   ],

@@ -13,8 +13,18 @@ VERSION_CODENAME=trixie
 ID=airux
 ID_LIKE=debian
 HOME_URL="file:///usr/share/doc/aira/README.md"
+LOGO=airux
 OSR
 ln -sf ../usr/lib/os-release /etc/os-release
+# System Settings -> About: desktop-base's kcm-about-distrorc (Debian swirl, "13") overrides os-release
+dpkg-divert --quiet --local --rename --add /etc/xdg/kcm-about-distrorc
+cat > /etc/xdg/kcm-about-distrorc <<'ABOUT'
+[General]
+LogoPath=airux
+Version=0.1
+Variant=based on Debian 13, with AIRA
+Website=https://github.com/Absurd28/AIRUX_OS
+ABOUT
 echo "AIRUX 0.1 \n \l" > /etc/issue
 echo "airux" > /etc/hostname
 

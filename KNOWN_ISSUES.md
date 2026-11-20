@@ -64,6 +64,9 @@ The phase each issue was found in is in brackets.
 - **The live session never locks or blanks the screen** (on mains power). The live user's password
   is not known to anyone, so Plasma's 5-minute lock locked people out of the live system (and
   blocked Ctrl+Space). Installed systems keep the normal lock.
+- **AIRA works in AIROX Code's Restricted Mode** (folders you have not trusted): she only reads files
+  and proposes edits you accept, so her extension says it supports untrusted folders. Without that,
+  VS Code turned her off there, and with her the Midnight Glass look.
 - **AIRA Home replaces the Welcome page** a moment after AIROX Code starts (the AIRA extension
   starts after the window has opened), so Welcome can flash briefly.
 - **Untested on real hardware so far:** the Plasma desktop, AIROX Code, NEOX and the fixed audio
@@ -90,6 +93,18 @@ The phase each issue was found in is in brackets.
   rule above).
 - **AIRA asks before opening web pages** (sending anything off the machine needs your OK), so
   "open the browser and search for X" shows a confirmation in AIRA's panel first.
+
+- **AIRA's side panel in NEOX opens with Ctrl+Shift+Y** or the AIRA button pinned in the toolbar.
+  Chromium keeps Ctrl+Shift+A for its own tab search, and Alt+Shift+A did not reach NEOX in testing.
+
+## Games
+
+- **AIRUX Snake runs in a Chromium app window,** so it uses more memory than a native game (a
+  Chromium renderer). Its best scores are kept per mode and speed in its own small profile.
+- **Knights shows its new-game dialog first;** you against Stockfish (white) is preselected.
+  Closing Knights mid-game asks whether to save it.
+- **The KDE games are Debian's packages, unchanged,** so they follow the desktop's Breeze theme
+  rather than AIRUX's colours.
 
 ## Installer and image
 

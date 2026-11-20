@@ -4,7 +4,7 @@
 Pass requires every line below; screenshots go to $AIRUX_WORK/build/vm/desktop-*.png.
   system      AIRUX, aira + aira-models-base + airox-code installed, AIRA's services healthy
   session     Plasma (plasmashell and KWin) runs for the live user
-  taskbar     bottom panel: Start (AIRA icon), pinned apps incl. AIROX Code, tray, clock, show desktop
+  taskbar     bottom panel: Start (AIRUX logo), pinned apps incl. AIROX Code, tray, clock, show desktop
   theme       Breeze Dark from the AIRUX look-and-feel package
   aira_panel  AIRA's window is docked on the right edge, full height
   ptt         Ctrl+Space anywhere starts AIRA's microphone recording, pressing again stops it
@@ -13,6 +13,9 @@ Pass requires every line below; screenshots go to $AIRUX_WORK/build/vm/desktop-*
   airox_look  AIROX Code has its Midnight Glass stylesheet (checksums intact) and opens on AIRA Home
   aira_in_neox  a command to AIRA searches the web in a NEOX window
   tor         Tor is off at boot; a NEOX private window starts it and opens through it
+  logo        the AIRUX logo: os-release LOGO, icon theme, Start button, the user's picture
+  games       the offline games are installed; Knights (against Stockfish), KSudoku and AIRUX Snake
+              open a window
 """
 from __future__ import annotations
 
@@ -39,7 +42,7 @@ def session_env() -> str:
     env = sh(f"tr '\\0' '\\n' < /proc/{pid}/environ")["out"]
     keep = [l for l in env.splitlines()
             if l.split("=", 1)[0] in ("DISPLAY", "XAUTHORITY", "WAYLAND_DISPLAY", "DBUS_SESSION_BUS_ADDRESS",
-                                      "XDG_RUNTIME_DIR", "HOME", "XDG_SESSION_TYPE", "XDG_CURRENT_DESKTOP")]
+                                      "XDG_RUNTIME_DIR", "HOME", "XDG_SESSION_TYPE", "XDG_CURRENT_DESKTOP", "PATH")]
     return " ".join(f"'{l}'" for l in keep)
 
 
@@ -97,7 +100,8 @@ def windows(env: str) -> list[tuple[str, int, int, int, int, str]]:
     for line in out.splitlines():
         parts = line.split(f"{token}|", 1)[1].split("|")
         if len(parts) >= 7 and parts[6] == "true":
-            wins.append((parts[0], int(parts[2]), int(parts[3]), int(parts[4]), int(parts[5]), parts[1]))
+            # geometry can be fractional (a centred dialog at x=316.5)
+            wins.append((parts[0], *(round(float(v)) for v in parts[2:6]), parts[1]))
     return wins
 
 
@@ -150,7 +154,7 @@ def main() -> int:
     print(f"Start menu pinned apps: {start_pins.replace('<default>', '')}")
     r["taskbar"] = (all(n in plugins for n in need) and bool(launchers) and "airox-code.desktop" in launchers.group(1)
                     and "aira.desktop" in start_pins
-                    and re.search(r"^icon=aira$", rc, re.M) is not None and re.search(r"^location=4$", rc, re.M) is not None)
+                    and re.search(r"^icon=airux$", rc, re.M) is not None and re.search(r"^location=4$", rc, re.M) is not None)
 
     scheme = as_user(env, "kreadconfig6 --file kdeglobals --group General --key ColorScheme")["out"].strip()
     laf = as_user(env, "kreadconfig6 --file kdeglobals --group KDE --key LookAndFeelPackage")["out"].strip()
@@ -230,6 +234,44 @@ PY""")["out"].strip()
     home = [w for w in windows(env) if "AIRA Home" in w[0]]
     print(f"AIROX Code look: {look}; AIRA Home open: {bool(home)}")
     r["airox_look"] = look == "styled checksums-ok" and bool(home)
+
+    # the AIRUX logo everywhere the system shows itself
+    logo = sh("grep -c '^LOGO=airux$' /usr/lib/os-release; "
+              "test -f /usr/share/icons/hicolor/scalable/apps/airux.svg && echo icon; "
+              f"cmp -s /etc/skel/.face.icon /home/{USER}/.face.icon && echo face")["out"].split()
+    print(f"logo: {logo}")
+    r["logo"] = logo == ["1", "icon", "face"]
+
+    # offline games: installed, and the three headline ones open (Knights starts Stockfish)
+    games = ["knights", "stockfish", "ksudoku", "kpat", "kmahjongg", "kmines", "kreversi", "kfourinline",
+             "bovo", "picmi", "kblocks", "kbreakout", "kdiamond", "kbounce", "knavalbattle", "aira"]
+    inst = sh("dpkg-query -W -f='${Package} ${Status}\n' " + " ".join(games))["out"]
+    missing = [g for g in games if f"{g} install ok installed" not in inst]
+    snake = sh("test -x /usr/bin/airux-snake && test -f /usr/share/airux/games/snake/snake-core.js && echo ok")["out"].strip()
+    print(f"games missing: {missing}; AIRUX Snake files: {snake}")
+    close_windows(env)
+    opened_games = {}
+    for i, (name, cmd, pat) in enumerate([("Knights", "knights", r"Knights"), ("KSudoku", "ksudoku", r"KSudoku"),
+                                          ("AIRUX Snake", "airux-snake", r"^AIRUX Snake$")], 10):
+        # with the session's PATH, as from the Start menu (the KDE games and Stockfish are in /usr/games)
+        as_user(env, f"setsid {cmd} >/dev/null 2>&1 &")
+        w = wait_window(env, pat, 90)
+        print(f"{name}: {w}")
+        if name == "Knights" and w:
+            # Knights opens with its new-game dialog: accept it (you, white, against Stockfish)
+            for _ in range(3):
+                time.sleep(4)
+                if sh("pgrep -x stockfish")["out"].strip():
+                    break
+                vm.key(D, "ret")
+            engine = sh("pgrep -a stockfish")["out"].strip()
+            print(f"chess engine: {engine or None}")
+            w = w if engine else None
+        opened_games[name] = bool(w)
+        time.sleep(3)
+        vm.shot(D, D / f"desktop-{i}-{name.lower().replace(' ', '-')}.png")
+        close_windows(env)
+    r["games"] = not missing and snake == "ok" and all(opened_games.values())
 
     # AIRA browses in NEOX: a typed command to AIRA, and the search appears in a NEOX window. The apps
     # opened above are closed first (the 5 GB VM has no room for them and the model), so AIRA also

@@ -97,6 +97,24 @@ gwenview
 okular
 partitionmanager
 
+# --- offline games (KDE games: they match the desktop and need no internet). Start -> Games.
+# Knights plays chess against Stockfish (listed: the image is built without Recommends).
+knights
+stockfish
+ksudoku
+kpat
+kmahjongg
+kmines
+kreversi
+kfourinline
+bovo
+picmi
+kblocks
+kbreakout
+kdiamond
+kbounce
+knavalbattle
+
 # --- audio: alsa-ucm-conf tells PipeWire how to drive modern laptop audio (Intel SOF speakers and
 # microphones); without it a real laptop had no usable microphone
 pipewire

@@ -34,5 +34,10 @@
   "BrowserThemeColor": "#0B1220",
   "ShowHomeButton": true,
   "HomepageIsNewTabPage": true,
-  "RestoreOnStartup": 5
+  "RestoreOnStartup": 5,
+  "ExtensionSettings": {
+    "caeflmcomdjlfjeinfhpookmojmhiphd": {
+      "toolbar_pin": "force_pinned"
+    }
+  }
 }

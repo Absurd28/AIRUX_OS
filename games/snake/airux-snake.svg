@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- AIRUX Snake icon -->
+  <defs>
+    <linearGradient id="t" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1a2532"/><stop offset="1" stop-color="#0b1016"/>
+    </linearGradient>
+    <linearGradient id="s" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#59c38a"/><stop offset="1" stop-color="#7cc4ff"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="url(#t)"/>
+  <rect x="9.5" y="9.5" width="237" height="237" rx="54.5" fill="none" stroke="#2b3a4b" stroke-width="3"/>
+  <path d="M60 176 L60 128 Q60 104 84 104 L124 104 Q148 104 148 128 L148 136 Q148 160 172 160 Q196 160 196 136 L196 92"
+        fill="none" stroke="url(#s)" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="190" cy="88" r="3.5" fill="#0b1016"/><circle cx="202" cy="88" r="3.5" fill="#0b1016"/>
+  <circle cx="196" cy="52" r="11" fill="#ff8a7a"/>
+</svg>
