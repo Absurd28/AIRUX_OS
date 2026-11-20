@@ -1,0 +1,21 @@
+#!/bin/sh
+# Phagos Security: the app window (like Windows Security), served by this user's phagos-agent
+f="${XDG_STATE_HOME:-$HOME/.local/state}/phagos/ui.token"
+alive() { [ -r "$f" ] && read -r port token < "$f" && curl -fs -o /dev/null -m 2 "http://127.0.0.1:$port/phagos.svg"; }
+if ! alive; then
+    rm -f "$f"
+    setsid /usr/lib/phagos/phagos-agent >/dev/null 2>&1 &
+    i=0
+    until alive; do
+        i=$((i + 1))
+        if [ "$i" -gt 40 ]; then
+            notify-send -a Phagos "Phagos Security" "Phagos did not start. Check 'systemctl status phagosd'." 2>/dev/null
+            exit 1
+        fi
+        sleep 0.25
+    done
+fi
+read -r port token < "$f"
+exec chromium --app="http://127.0.0.1:$port/" --class=phagos-security --window-size=1100,740 \
+    --no-first-run --noerrdialogs --password-store=basic \
+    --user-data-dir="${XDG_DATA_HOME:-$HOME/.local/share}/phagos/ui-profile"

@@ -193,6 +193,35 @@ These hallucination controls are implemented in code, not only in prompts.
   quote is checked against the page, and answers that quote nothing are tagged unverified. Outside
   the desktop (tests, no NEOX), AIRA falls back to Chromium driven through Playwright.
 
+## Phagos (antivirus)
+
+Phagos (from phagocyte) is AIRUX's own antivirus. It is standard-library Python, packaged as
+`phagos`; `phagosd` runs as root.
+
+```text
+fanotify (close-write, open-exec-perm) ─► scanner ─► clean / suspicious / malicious ─► allow, deny, quarantine
+/proc every 2 s + write events ─► signals ─► Dendritic Cell Algorithm ─► pause (SIGSTOP), the user decides
+/run/phagos/phagos.sock ◄─ phagos CLI, phagos-agent (notifications + Phagos Security app), AIRA's `security` tool
+```
+
+- **Features:** each file becomes a 12-number vector (entropy, size, ELF traits, packer marks,
+  printable share, suspicious strings, network strings, location, exec bit).
+- **Signatures:** in-house TOML rules (text, hex, regex; conditions; magic; path globs) and a
+  SHA-256 blocklist; no third-party database.
+- **Negative Selection:** real-valued V-detectors generated outside the "self" of the image's own
+  package programs (learned at image build). A file inside a detector is foreign; alone that is
+  only noted, with heuristics it is suspicious.
+- **Clonal Selection:** a confirmed threat clones and mutates the nearest detectors; the best
+  clone that still avoids self becomes a memory detector named after the threat, so variants are
+  recognised.
+- **Dendritic Cell Algorithm:** per process, PAMP (decoy written, signature hit, deleted or temp
+  executable), danger (mass random-looking rewrites, write bursts, new connections) and safe
+  (package-owned, steady) signals; anomalous MCAV pauses the process. Writes are charged to the
+  responsible process, past package tools (openssl, cp) to the script driving them.
+- **Response (like Defender):** malicious → blocked and quarantined; suspicious → blocked from
+  running or reported, the user decides; dangerous behaviour → paused until kill, quarantine or
+  allow. Turning protection off, restoring and allowing need an administrator (polkit).
+
 ## Image
 
 - **Packages:**

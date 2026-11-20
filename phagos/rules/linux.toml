@@ -1,0 +1,111 @@
+# Phagos signature rules (in-house). Patterns describe what an attack does, specific enough not to
+# match ordinary files: bash itself contains "/dev/tcp/", so the reverse-shell rules look for the
+# whole command, not the bare string. Format: phagos/engines/rules.py.
+
+[[rule]]
+name = "EICAR-Test-File"
+severity = "malicious"
+description = "the EICAR antivirus test file (harmless, used to check that protection works)"
+text = ['X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*']
+
+[[rule]]
+name = "Linux.ReverseShell.Bash"
+severity = "malicious"
+description = "a shell that hands control of this computer to a remote machine through /dev/tcp"
+regex = ['(?:ba|z|da)?sh\s+-i\s*[>&0-9 ]*/dev/(?:tcp|udp)/[\w.\-]+/\d{1,5}']
+
+[[rule]]
+name = "Linux.ReverseShell.FdLoop"
+severity = "malicious"
+description = "a shell reading commands from a network connection opened on a file descriptor"
+# "exec 3<>/dev/tcp/host/port" alone is a common port check (AIRUX's own NEOX uses it); a reverse
+# shell also wires a shell or a command loop to that descriptor
+regex = ['exec\s+\d+<>\s*/dev/(?:tcp|udp)/[\w.\-]+/\d{1,5}',
+         '(?:while\s+read[^\n]*do\s+\$\w+|/bin/(?:ba)?sh\s+(?:-i\s*)?)[^\n]*[<>]&\s*\d+']
+condition = "all"
+
+[[rule]]
+name = "Linux.ReverseShell.Netcat"
+severity = "malicious"
+description = "netcat or socat giving a remote machine a shell"
+regex = ['\bn(?:c|cat|etcat)\b[^\n]{0,80}\s-[ec]\s+/bin/(?:ba|z|da)?sh',
+         '\bsocat\b[^\n]{0,120}exec:[\x27"]?/bin/(?:ba)?sh',
+         'mkfifo\s+\S+[^\n]{0,80}\|\s*/bin/(?:ba)?sh\s+-i[^\n]{0,80}\|\s*nc\b']
+
+[[rule]]
+name = "Linux.ReverseShell.Script"
+severity = "malicious"
+description = "a script that connects out and attaches a shell to the connection"
+regex = ['socket\.socket\(', 'os\.dup2\(\s*\w+\.fileno\(\)', '(?:pty\.spawn|subprocess\.call)\(\s*\[?\s*[\x27"]/bin/(?:ba)?sh']
+condition = "all"
+magic = "text"
+
+[[rule]]
+name = "Miner.XMRig.Config"
+severity = "malicious"
+description = "a cryptocurrency miner's configuration (uses this computer to mine for someone else)"
+regex = ['"donate-level"\s*:', 'stratum\+(?:tcp|ssl|tls)://', '"algo"\s*:\s*"(?:rx/0|rx/wow|cn[/-]|randomx|kawpow)']
+condition = 2
+
+[[rule]]
+name = "Miner.Stratum.Pool"
+severity = "suspicious"
+description = "mentions a mining pool address (stratum)"
+regex = ['stratum\+(?:tcp|ssl|tls)://[\w.\-]+:\d{2,5}']
+magic = "text"
+
+[[rule]]
+name = "Webshell.PHP"
+severity = "malicious"
+description = "a PHP web shell: runs commands or hidden code sent to a web server"
+regex = ['eval\s*\(\s*(?:base64_decode|gzinflate|gzuncompress|str_rot13)\s*\(',
+         '(?:system|passthru|shell_exec|popen|proc_open)\s*\(\s*\$_(?:GET|POST|REQUEST|COOKIE)\[',
+         'assert\s*\(\s*\$_(?:GET|POST|REQUEST)\[']
+magic = "text"
+
+[[rule]]
+name = "Dropper.PipeToShell.Persistence"
+severity = "malicious"
+description = "downloads code and runs it at every login or on a schedule"
+regex = ['(?:curl|wget)\s[^\n|;]{0,300}\|\s*(?:ba|z|da)?sh\b',
+         '(?:curl|wget)\s[^\n;]{0,300}-[oO]\s*/(?:tmp|dev/shm|var/tmp)/\S+\s*(?:;|&&)\s*(?:chmod\s+\+x|sh|bash|\./)']
+paths = ["/etc/cron*", "/var/spool/cron/*", "*/.config/autostart/*", "*/systemd/*", "*/.bashrc", "*/.profile",
+         "*/.bash_profile", "*/.zshrc", "/etc/profile", "/etc/profile.d/*", "/etc/rc.local", "/etc/init.d/*"]
+
+[[rule]]
+name = "Script.Obfuscated.Base64Exec"
+severity = "malicious"
+description = "hides a long encoded program and runs it straight away"
+regex = ['echo\s+[\x27"]?[A-Za-z0-9+/=]{200,}[\x27"]?\s*\|\s*base64\s+(?:-d|--decode)\s*\|\s*(?:ba|z|da)?sh',
+         'exec\(\s*(?:base64\.b64decode|zlib\.decompress)\([^)]{200,}']
+
+[[rule]]
+name = "Rootkit.LdPreload"
+severity = "suspicious"
+description = "a library forced into every program (/etc/ld.so.preload), a common rootkit hook"
+regex = ['\S']
+paths = ["/etc/ld.so.preload"]
+
+[[rule]]
+name = "Implant.SSHKey.Command"
+severity = "suspicious"
+description = "an SSH key that runs a download or shell command when it logs in"
+regex = ['command="[^"]*(?:curl|wget|nc\s|bash\s+-i|/dev/tcp)']
+paths = ["*/authorized_keys", "*/authorized_keys2"]
+
+[[rule]]
+name = "Ransom.Note"
+severity = "suspicious"
+description = "reads like a ransom note"
+regex = ['(?:your|all)\s+(?:important\s+)?files\s+(?:have\s+been|are|were)\s+encrypted',
+         '\b(?:bitcoin|btc|monero|xmr|wallet)\b', '\b(?:decrypt(?:ion|or)?|recover\s+your\s+files)\b']
+condition = "all"
+magic = "text"
+max_size = 1048576
+
+[[rule]]
+name = "ELF.Packed.UPX"
+severity = "suspicious"
+description = "a program compressed with UPX, which malware often uses to hide its code"
+text = ['UPX!']
+magic = "elf"

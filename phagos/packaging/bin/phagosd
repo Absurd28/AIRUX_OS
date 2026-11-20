@@ -1,0 +1,3 @@
+#!/bin/sh
+# Phagos's protection service (root): real-time protection, behaviour monitoring, scans
+PYTHONPATH=/usr/lib/phagos exec /usr/bin/python3 -s -m phagos.daemon "$@"

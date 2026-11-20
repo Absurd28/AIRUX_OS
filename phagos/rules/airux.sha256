@@ -1,0 +1,3 @@
+# Phagos blocklist: SHA-256 of whole files known to be malicious, one per line, then a name.
+# Local additions go in /etc/phagos/rules.d/*.sha256.
+275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f EICAR-Test-File

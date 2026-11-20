@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Phagos Security
+GenericName=Antivirus
+Comment=Virus and threat protection, ransomware protection, scans and quarantine
+Exec=phagos-security
+Icon=phagos
+Terminal=false
+Categories=System;Security;Settings;
+Keywords=antivirus;virus;malware;security;defender;scan;quarantine;ransomware;
+StartupWMClass=phagos-security

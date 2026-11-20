@@ -1,0 +1,3 @@
+#!/bin/sh
+# Phagos, AIRUX's antivirus, from a terminal: phagos status | scan [--quick|--full|PATH] | history | quarantine | allowed
+PYTHONPATH=/usr/lib/phagos exec /usr/bin/python3 -s -m phagos.cli "$@"

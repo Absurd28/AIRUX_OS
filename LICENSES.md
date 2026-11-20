@@ -44,3 +44,9 @@ synthesis in a separate process as is done for Piper.
 | AIRUX Snake | Snake game made for AIRUX (games/snake) | MIT, like the rest of AIRUX | this repository |
 | Stockfish 17 | Chess engine Knights plays against | GPL-3.0 | Debian package `stockfish` |
 | KDE games: Knights, KSudoku, KPatience, KMahjongg, KMines, KReversi, Four in a Row, Bovo, Picmi, KBlocks, KBreakout, KDiamond, KBounce, Naval Battle | Offline games | GPL-2.0-or-later / LGPL (see each package's copyright file) | Debian packages, unmodified |
+
+## Security
+
+| Component | Use | Licence | Source |
+| --- | --- | --- | --- |
+| Phagos (engines, rules, daemon, app) | AIRUX's antivirus | MIT, like the rest of AIRUX | this repository (phagos/) |

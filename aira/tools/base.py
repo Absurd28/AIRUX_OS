@@ -14,8 +14,9 @@ from pathlib import Path
 from typing import Any, Callable
 
 MAX_TOOLS_PER_AGENT = 8
-# Tuned after phase 6: the Desktop agent gets a 9th tool, the browser.
-TOOL_CAP = {"desktop": 9}
+# Tuned after phase 6: the Desktop agent gets a 9th tool, the browser; after phase 9 the System agent
+# gets a 9th, `security` (Phagos, the antivirus).
+TOOL_CAP = {"desktop": 9, "system": 9}
 
 
 def tool_cap(agent: str) -> int:

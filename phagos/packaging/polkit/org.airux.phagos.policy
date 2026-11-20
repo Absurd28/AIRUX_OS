@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<policyconfig>
+  <vendor>AIRUX</vendor>
+  <action id="org.airux.phagos.manage">
+    <description>Change Phagos protection</description>
+    <message>An administrator must approve this change to Phagos (turning protection off, restoring or deleting quarantined files, or allowing a flagged file).</message>
+    <icon_name>phagos</icon_name>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+  </action>
+</policyconfig>

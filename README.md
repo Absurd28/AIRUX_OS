@@ -61,6 +61,7 @@ prompts:
 | 🖥️ **AIRA side panel** | AIRA docks on the right like Copilot: live transcript, active agents, pending confirmations and verified/unverified tags. Ctrl+Space talks to her from anywhere, and **AIRA Settings** covers voice, names, memory and privacy. |
 | 💻 **AIROX Code** | The AIRUX code editor: VSCodium (the open-source build of VS Code) with AIRA built in, like Copilot, and a look of its own (*Midnight Glass*: floating rounded panels, pill tabs, a top activity bar and an **AIRA Home** start page). It offers chat with cited sources, inline suggestions, edits applied only after review, commit messages and error explanations, all on the local model. |
 | 🌐 **NEOX browser** | The AIRUX browser, built on Chromium's engine with Brave-style protection: **Shields** (uBlock Origin Lite), strict privacy defaults (HTTPS-only, third-party cookies blocked, no telemetry, DuckDuckGo), **Global Privacy Control**, fingerprinting protection, and a **private window with Tor**. AIRA browses in it: say *"open the browser and search for X"*, or ask about the page you're reading in NEOX's AIRA side panel, where answers must quote the page. |
+| 🦠 **Phagos antivirus** | AIRUX's own antivirus, designed like an immune system: real-time protection (files are checked as they are written, and malicious programs are not allowed to start), in-house signature rules, **Negative Selection** and **Clonal Selection** (artificial immune system) and the **Dendritic Cell Algorithm** from Danger Theory, which pauses a program that starts encrypting your files and lets you decide. Quarantine, scans, protection history and a Windows Security-style app; ask AIRA "is my computer protected?" |
 | 🎮 **Offline games** | Chess against Stockfish (Knights), Sudoku, Solitaire, Mahjongg, Minesweeper, Reversi, Four in a Row, Gomoku, nonograms, falling blocks, Breakout and more from KDE, plus **AIRUX Snake**, our own take on the classic snake game. All of them work without internet. |
 | 💿 **Real OS image** | A live ISO with AIRUX branding, a Plymouth splash and the Calamares installer. It is tested end to end in QEMU: boot, install, then AIRA answering by voice. |
 
@@ -84,6 +85,8 @@ come from the real local model (the 2B tier, on 4 CPU cores), and pages are real
 | <img src="docs/screenshots/tour-09-snake.png" width="420"/> | <img src="docs/screenshots/tour-10-files.png" width="420"/> |
 | **About this System** | **The installer** |
 | <img src="docs/screenshots/tour-11-about.png" width="420"/> | <img src="docs/screenshots/tour-12-installer.png" width="420"/> |
+| **Phagos pauses a ransomware-like program** | **Phagos Security** |
+| <img src="docs/screenshots/phagos-3-ransomware-paused.png" width="420"/> | <img src="docs/screenshots/phagos-5-app.png" width="420"/> |
 | **Installer finished** | **Installed system** |
 | <img src="docs/screenshots/vm-install-done.png" width="420"/> | <img src="docs/screenshots/vm-installed-desktop.png" width="420"/> |
 
@@ -311,6 +314,7 @@ aira/            AIRA: orchestrator, agents, grounding guard, permission broker
   swarm/         worker pool, pheromone board, quorum, load controller
   shell/         AIRA side panel and AIRA Settings (HTTP + SSE, Chromium)
 airox-code/      AIROX Code: the AIRA extension (chat, inline, reviewed edits, AIRA Home), Midnight Glass theme
+phagos/          Phagos antivirus: engines (rules, NSA, CLONALG, DCA), daemon, agent, app, rules
 neox/            NEOX browser: extension (AIRA bridge, side panel, new tab, privacy), launchers, policies
 image/           live-build configuration for the AIRUX ISO
 packaging/       systemd units, polkit rule, branding, Debian packaging
@@ -332,6 +336,7 @@ docs/            architecture, USB guide, demo, evaluation reports
 - [x] Windows 11-style Plasma desktop with AIRA docked like Copilot
 - [x] AIROX Code: a VS Code-based editor with AIRA built in, with its own Midnight Glass look
 - [x] NEOX: a Chromium-based private browser with Shields, Tor windows and AIRA built in
+- [x] Phagos: an in-house antivirus built on artificial immune systems and Danger Theory
 - [ ] Real-hardware validation across more laptops
 - [ ] "Hey AIRA" wake word (openWakeWord)
 - [ ] Optional NVIDIA driver in the image

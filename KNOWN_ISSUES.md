@@ -97,6 +97,32 @@ The phase each issue was found in is in brackets.
 - **AIRA's side panel in NEOX opens with Ctrl+Shift+Y** or the AIRA button pinned in the toolbar.
   Chromium keeps Ctrl+Shift+A for its own tab search, and Alt+Shift+A did not reach NEOX in testing.
 
+## Phagos (antivirus)
+
+- **Its own signatures only.** Phagos has 13 in-house rules and a blocklist, not a database of
+  millions of known samples: it catches the families its rules and immune engines describe, and
+  misses most specific known malware that a commercial or ClamAV database would name. This was the
+  chosen trade-off (fully in-house).
+- **Real-time checks fail open.** A program waits at most 1 s for its verdict; if a scan takes
+  longer, the program runs and is scanned right after. If phagosd stops, the kernel lets
+  everything run.
+- **Behaviour monitoring samples every 2 s,** so a fast ransomware gets a few seconds of work
+  before it is paused: in the QEMU check a simulator rewriting about 50 files a second was paused
+  after 136 of its 400 test files (about 3 s). Decoy files stop it at once when it reaches one.
+- **Under a flood of writes, some files are not scanned when written.** Phagos keeps at most 4,000
+  written files waiting for a scan, and skips the rest (in a test with 60,000 writes, about 10,000
+  were skipped). They are still checked when someone runs them. This keeps program starts fast:
+  holding every write event once exhausted the open files and froze all program starts in a VM.
+- **On the 2B model, AIRA's answers about Phagos are often the raw tool output** ("Here is what
+  security returned: ...") because her own wording fails the reply checker; once she ran "status"
+  when asked to scan. Bigger tiers word it properly.
+- **Negative Selection alone never blocks.** An unusual program (a new build, a tool you compiled)
+  is only noted in the history unless the heuristics or signatures agree.
+- **Your own scripts can be paused** if they rewrite many files with random-looking data quickly
+  (for example batch-encrypting backups). Choose "Allow" once; Phagos remembers the script.
+- **Packaged programs are checked on their first 256 KiB and last 64 KiB when they start,** not
+  hashed in full; replaced system programs are found by the weekly integrity check (dpkg --verify).
+
 ## Games
 
 - **AIRUX Snake runs in a Chromium app window,** so it uses more memory than a native game (a

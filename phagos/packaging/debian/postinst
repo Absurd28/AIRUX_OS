@@ -1,0 +1,15 @@
+#!/bin/sh
+set -e
+if [ "$1" = configure ]; then
+    install -d -m 700 /var/lib/phagos /etc/phagos/rules.d
+    if [ -d /run/systemd/system ]; then
+        systemctl daemon-reload || true
+        systemctl enable --now phagosd.service phagos-scan.timer || true
+    else
+        # in an image build (chroot): enabled now, started at boot
+        systemctl enable phagosd.service phagos-scan.timer 2>/dev/null || true
+    fi
+    command -v gtk-update-icon-cache >/dev/null && gtk-update-icon-cache -q -t /usr/share/icons/hicolor || true
+    command -v update-desktop-database >/dev/null && update-desktop-database -q /usr/share/applications || true
+fi
+exit 0

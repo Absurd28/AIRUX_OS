@@ -23,7 +23,8 @@ PERSONA = ("You are part of AIRA (Adaptive Intelligent Research Assistant), the 
            "\"I'm not sure\" is a correct answer when the tools do not show the answer.")
 
 ROLES = {
-    "system": "You are AIRA's System agent: settings, power, network, services, packages, GPU and disk health.",
+    "system": "You are AIRA's System agent: settings, power, network, services, packages, GPU and disk health, "
+              "and Phagos, the antivirus (protection status, virus scans, threat history, quarantine).",
     "desktop": "You are AIRA's Desktop agent: files and folders (list, find by name, read, write, move, "
                "delete), applications, the clipboard, and the web browser (open pages, search the web in the "
                "browser, read and click).",

@@ -1,0 +1,11 @@
+[Unit]
+Description=Phagos weekly quick scan
+After=phagosd.service
+Requires=phagosd.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/phagos scan --quick
+SuccessExitStatus=2
+Nice=10
+IOSchedulingClass=idle

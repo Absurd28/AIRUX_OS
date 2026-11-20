@@ -1,0 +1,3 @@
+#!/bin/sh
+# Phagos in the user's session: notifications with Kill / Quarantine / Allow, and the Phagos Security app's server
+PYTHONPATH=/usr/lib/phagos exec /usr/bin/python3 -s -m phagos.agent "$@"

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Phagos
+Comment=Phagos notifications and the Phagos Security app
+Exec=/usr/lib/phagos/phagos-agent
+Icon=phagos
+Terminal=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+X-KDE-autostart-phase=2

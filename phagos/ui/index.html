@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phagos Security</title>
+<style>
+  :root { --bg:#0b1016; --side:#0f151d; --panel:#131b25; --line:#223040; --text:#e6e9ee; --muted:#8b95a3;
+          --blue:#7cc4ff; --green:#59c38a; --amber:#f0b45a; --red:#ff7a7a; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--text);
+    font: 14px/1.45 Inter, "DejaVu Sans", system-ui, sans-serif; }
+  .app { display:flex; height:100%; }
+  nav { width:230px; background:var(--side); border-right:1px solid var(--line); padding:18px 10px; display:flex;
+    flex-direction:column; gap:2px; }
+  .brand { display:flex; align-items:center; gap:10px; padding:4px 10px 18px; font-weight:700; font-size:17px; }
+  .brand img { width:32px; height:32px; }
+  nav button { all:unset; cursor:pointer; padding:9px 12px; border-radius:8px; color:var(--muted); display:flex; gap:10px; }
+  nav button:hover { background:#16202b; color:var(--text); }
+  nav button.on { background:#18283a; color:var(--text); box-shadow: inset 3px 0 0 var(--blue); }
+  main { flex:1; overflow:auto; padding:28px 34px; }
+  h1 { font-size:24px; margin:0 0 4px; } h2 { font-size:16px; margin:26px 0 10px; }
+  .sub { color:var(--muted); margin:0 0 20px; }
+  .hero { display:flex; align-items:center; gap:18px; background:var(--panel); border:1px solid var(--line);
+    border-radius:14px; padding:18px 20px; margin-bottom:18px; }
+  .hero .dot { width:48px; height:48px; border-radius:50%; display:grid; place-items:center; font-size:24px; flex:none; }
+  .ok { background:#173326; color:var(--green); } .warn { background:#3a2e17; color:var(--amber); } .bad { background:#3a1b1b; color:var(--red); }
+  .tiles { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:12px; }
+  .tile { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px; cursor:pointer; }
+  .tile:hover { border-color:#35506a; }
+  .tile b { display:block; margin:8px 0 2px; } .tile span { color:var(--muted); font-size:13px; }
+  .badge { display:inline-flex; align-items:center; gap:6px; font-size:12px; padding:2px 9px; border-radius:999px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin-bottom:12px; }
+  .row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  button.act { font:inherit; color:var(--text); background:#172230; border:1px solid var(--line); border-radius:8px;
+    padding:7px 14px; cursor:pointer; }
+  button.act:hover { border-color:var(--blue); } button.primary { background:linear-gradient(90deg,#2f6f9c,#2f8a5f); border-color:transparent; font-weight:600; }
+  button.danger { border-color:#5a2a2a; color:#ffb4b4; }
+  table { width:100%; border-collapse:collapse; } td, th { text-align:left; padding:9px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-weight:500; font-size:12px; text-transform:uppercase; letter-spacing:.5px; }
+  .muted { color:var(--muted); } .mono { font-family:"JetBrains Mono", monospace; font-size:12px; word-break:break-all; }
+  .bar { height:6px; background:#1b2735; border-radius:999px; overflow:hidden; margin-top:10px; }
+  .bar i { display:block; height:100%; width:30%; background:linear-gradient(90deg,var(--blue),var(--green)); animation:slide 1.2s infinite; }
+  @keyframes slide { from { margin-left:-30%; } to { margin-left:100%; } }
+  .switch { position:relative; width:44px; height:24px; border-radius:999px; background:#2a3646; cursor:pointer; flex:none; border:none; }
+  .switch::after { content:""; position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%; background:#fff; transition:left .15s; }
+  .switch.on { background:var(--green); } .switch.on::after { left:23px; }
+  .toast { position:fixed; bottom:18px; right:18px; background:#1d2a39; border:1px solid var(--line); padding:10px 14px;
+    border-radius:10px; display:none; max-width:420px; }
+  input[type=text] { font:inherit; color:var(--text); background:#0f161e; border:1px solid var(--line); border-radius:8px; padding:7px 10px; width:320px; }
+  .engine { display:grid; grid-template-columns: 160px 1fr; gap:4px 14px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <nav>
+    <div class="brand"><img src="/phagos.svg" alt="">Phagos Security</div>
+    <button data-p="home" class="on">🏠 Home</button>
+    <button data-p="virus">🛡️ Virus &amp; threat protection</button>
+    <button data-p="ransom">🗂️ Ransomware protection</button>
+    <button data-p="behavior">🧬 App behaviour</button>
+    <button data-p="history">🕘 Protection history</button>
+    <button data-p="quarantine">📦 Quarantine</button>
+    <button data-p="allowed">✅ Allowed files</button>
+    <button data-p="settings">⚙️ Settings</button>
+  </nav>
+  <main id="main"></main>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+"use strict";
+const TOKEN = "__TOKEN__";
+let page = "home", S = null, timer = null;
+const $ = (s) => document.querySelector(s);
+const esc = (x) => String(x ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const when = (t) => t ? new Date(t * 1000).toLocaleString() : "never";
+
+async function api(method, params = {}) {
+  const r = await fetch("/api", { method: "POST", headers: { "Content-Type": "application/json", "X-Phagos-Token": TOKEN },
+    body: JSON.stringify({ method, params }) });
+  const out = await r.json();
+  if (!out.ok) throw new Error(out.error || "failed");
+  return out;
+}
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.style.display = "block"; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = "none", 5000); }
+async function act(fn, done) { try { const r = await fn(); if (done) toast(done); await refresh(); return r; } catch (e) { toast(e.message); } }
+
+function heroState() {
+  if (!S) return ["warn", "…", "Connecting to Phagos", ""];
+  if (!S.realtime) return ["bad", "!", "Real-time protection is off", "Your computer is exposed. Turn it back on in Settings."];
+  if (S.paused.length) return ["warn", "⏸", "A program is waiting for your decision", "Phagos paused it because it acted dangerously."];
+  return ["ok", "✓", "Your computer is protected", "Real-time protection, the immune model and the ransomware shield are on."];
+}
+
+const pages = {
+  home() {
+    const [cls, icon, title, sub] = heroState();
+    const e = S ? S.engines : {};
+    return `<h1>Security at a glance</h1><p class="sub">Phagos protects AIRUX like an immune system: it knows what belongs here, and reacts to danger.</p>
+      <div class="hero"><div class="dot ${cls}">${icon}</div><div><b>${esc(title)}</b><div class="muted">${esc(sub)}</div></div></div>
+      <div class="tiles">
+        ${tile("virus", "🛡️", "Virus & threat protection", S ? `Last quick scan: ${when(S.last_scans.quick && S.last_scans.quick.ts)}` : "")}
+        ${tile("ransom", "🗂️", "Ransomware protection", S ? `${S.ransomware_shield.decoys} decoy files on guard` : "")}
+        ${tile("behavior", "🧬", "App behaviour", S ? (S.paused.length ? `${S.paused.length} waiting for you` : "Dendritic cells watching") : "")}
+        ${tile("history", "🕘", "Protection history", S ? `${S.threats_30_days} threat${S.threats_30_days === 1 ? "" : "s"} in the last 30 days` : "")}
+        ${tile("quarantine", "📦", "Quarantine", S ? `${S.quarantined} item${S.quarantined === 1 ? "" : "s"}` : "")}
+        ${tile("settings", "🧠", "Immune model", S ? `${esc(e.self_model)} · ${e.detectors} detectors (${e.memory_detectors} memory)` : "")}
+      </div>`;
+  },
+  virus() {
+    const sc = S && S.scan, running = sc && !sc.done;
+    const last = sc ? `<div class="card"><b>${running ? "Scanning…" : "Last scan"}</b> <span class="muted">(${esc(sc.kind)})</span>
+        <div class="muted">${sc.scanned} files checked${running ? " · " + esc(sc.current) : " · finished " + when(sc.finished)}</div>
+        ${running ? '<div class="bar"><i></i></div>' : ""}
+        ${sc.found.length ? `<table><tr><th>Found</th><th>File</th><th>What happened</th></tr>${sc.found.map((f) =>
+          `<tr><td><span class="badge ${f.level === "malicious" ? "bad" : "warn"}">${esc(f.threat)}</span></td><td class="mono">${esc(f.path)}</td><td>${esc(f.action)}</td></tr>`).join("")}</table>`
+          : (running ? "" : '<div style="margin-top:8px">✓ No threats found.</div>')}</div>` : "";
+    return `<h1>Virus &amp; threat protection</h1><p class="sub">Scans use Phagos's own signatures, heuristics and immune detectors.</p>
+      <div class="card row"><button class="act primary" ${running ? "disabled" : ""} onclick="scan('quick')">Quick scan</button>
+        <button class="act" ${running ? "disabled" : ""} onclick="scan('full')">Full scan</button>
+        <input type="text" id="cpath" placeholder="/home/you/Downloads"><button class="act" ${running ? "disabled" : ""} onclick="scan('custom')">Scan folder</button></div>
+      ${last}
+      <h2>Current threats</h2>${threatsTable()}`;
+  },
+  ransom() {
+    return `<h1>Ransomware protection</h1><p class="sub">Two layers watch for files being encrypted against your will.</p>
+      <div class="card"><b>Decoy files</b><div class="muted">${S ? S.ransomware_shield.decoys : 0} hidden decoys sit in Documents, Pictures, Desktop and Downloads. Nothing you use touches them; a program that writes to or deletes one is stopped at once.</div></div>
+      <div class="card"><b>Danger signals</b><div class="muted">Many files rewritten with random-looking (encrypted) data, write bursts and new connections feed Phagos's dendritic cells. A program they judge dangerous is paused until you decide. Programs installed by AIRUX's packages count as safe signals, so ordinary copying and archiving are not stopped.</div></div>`;
+  },
+  behavior() {
+    const p = S ? S.paused : [];
+    return `<h1>App behaviour</h1><p class="sub">Danger Theory: Phagos judges programs by the harm they do, not by whether it has seen them before.</p>
+      ${p.length ? p.map((x) => `<div class="card"><div class="row"><span class="badge warn">Paused</span><b class="mono">${esc(x.script || x.exe)}</b><span class="muted">pid ${x.pid} · danger ${Math.round(x.mcav * 100)}%</span></div>
+        <ul>${x.reasons.map((r) => `<li>${esc(r)}</li>`).join("")}</ul>
+        <div class="row"><button class="act danger" onclick="decide(${x.event_id},'kill')">Stop it</button>
+        <button class="act danger" onclick="decide(${x.event_id},'quarantine')">Stop and quarantine</button>
+        <button class="act" onclick="decide(${x.event_id},'allow')">Allow</button></div></div>`).join("")
+        : '<div class="card">✓ No program is waiting for a decision.</div>'}`;
+  },
+  async history() {
+    const ev = (await api("history", { limit: 100 })).events;
+    return `<h1>Protection history</h1><p class="sub">The last 90 days.</p><div class="card"><table><tr><th>When</th><th>What</th><th>Item</th><th>Action</th></tr>
+      ${ev.map((e) => `<tr><td class="muted">${when(e.ts)}</td><td>${badge(e)}</td><td class="mono">${esc(e.path || "")}</td><td>${esc(e.action || "")}</td></tr>`).join("") || '<tr><td colspan="4">Nothing yet.</td></tr>'}</table></div>`;
+  },
+  async quarantine() {
+    const items = (await api("quarantine_list")).items;
+    return `<h1>Quarantine</h1><p class="sub">Quarantined files are compressed, masked and cannot run. Restoring needs an administrator.</p>
+      <div class="card"><table><tr><th>Threat</th><th>Original location</th><th>When</th><th></th></tr>
+      ${items.map((i) => `<tr><td><span class="badge ${i.level === "malicious" ? "bad" : "warn"}">${esc(i.threat)}</span></td><td class="mono">${esc(i.path)}</td><td class="muted">${when(i.ts)}</td>
+        <td class="row"><button class="act" onclick="restore('${esc(i.id)}')">Restore</button><button class="act danger" onclick="del('${esc(i.id)}')">Delete</button></td></tr>`).join("") || '<tr><td colspan="4">Quarantine is empty.</td></tr>'}</table></div>`;
+  },
+  async allowed() {
+    const items = (await api("allowed_list")).items;
+    return `<h1>Allowed files</h1><p class="sub">Files you allowed are matched by their exact contents (SHA-256); a changed file is checked again.</p>
+      <div class="card"><table><tr><th>File</th><th>Was flagged as</th><th></th></tr>
+      ${items.map((i) => `<tr><td class="mono">${esc(i.path)}</td><td>${esc(i.threat)}</td><td><button class="act" onclick="unallow('${esc(i.sha256)}')">Remove</button></td></tr>`).join("") || '<tr><td colspan="3">None.</td></tr>'}</table></div>`;
+  },
+  settings() {
+    const e = S ? S.engines : {};
+    return `<h1>Settings</h1><p class="sub">Turning protection off needs an administrator.</p>
+      <div class="card row"><button class="switch ${S && S.realtime ? "on" : ""}" onclick="realtime()"></button><div><b>Real-time protection</b><div class="muted">Scans files as they are written and checks programs before they start.</div></div></div>
+      <h2>Engines</h2><div class="card engine">
+        <span class="muted">Signatures</span><span>${e.rules} in-house rules, ${e.blocklist} blocklisted file(s)</span>
+        <span class="muted">Negative Selection</span><span>${esc(e.self_model)}: ${e.self_samples} samples of “self”, ${e.detectors} detectors</span>
+        <span class="muted">Clonal Selection</span><span>${e.memory_detectors} memory detector(s) matured on real threats</span>
+        <span class="muted">Dendritic Cells</span><span>${esc(e.dendritic_cells)} (Danger Theory)</span>
+        <span class="muted">Version</span><span>Phagos ${S ? esc(S.version) : ""}</span></div>`;
+  },
+};
+function tile(p, icon, title, sub) { return `<div class="tile" onclick="go('${p}')"><div style="font-size:22px">${icon}</div><b>${esc(title)}</b><span>${esc(sub)}</span></div>`; }
+function badge(e) {
+  const cls = e.kind === "threat" ? "bad" : (e.kind === "suspicious" || e.kind === "behavior" || e.kind === "integrity") ? "warn" : "ok";
+  return `<span class="badge ${cls}">${esc(e.threat || e.kind)}</span>`;
+}
+function threatsTable() {
+  const p = S ? S.paused : [];
+  return p.length ? `<div class="card">${p.length} paused program(s) are waiting: <button class="act" onclick="go('behavior')">Review</button></div>` : '<div class="card">✓ No current threats.</div>';
+}
+async function scan(kind) {
+  const params = { kind };
+  if (kind === "custom") { params.path = $("#cpath").value.trim(); if (!params.path) return toast("Type a folder to scan."); }
+  await act(() => api("scan", params), "Scan started.");
+}
+const decide = (id, choice) => act(() => api("decide", { event_id: id, choice }), "Done.");
+const restore = (id) => act(() => api("quarantine_restore", { id }), "Restored and allowed.");
+const del = (id) => confirm("Delete this file for good?") && act(() => api("quarantine_delete", { id }), "Deleted.");
+const unallow = (sha256) => act(() => api("unallow", { sha256 }), "Removed.");
+const realtime = () => act(() => api("realtime", { on: !(S && S.realtime) }), "Saved.");
+
+async function render() {
+  const fn = pages[page];
+  try { $("#main").innerHTML = await fn(); } catch (e) { $("#main").innerHTML = `<h1>Phagos</h1><div class="card">${esc(e.message)}</div>`; }
+}
+async function refresh() {
+  try { S = await api("status"); } catch (e) { S = null; }
+  const typing = document.activeElement && document.activeElement.id === "cpath";
+  if (typing) return;                                   // do not wipe a path being typed
+  const keep = $("#cpath") ? $("#cpath").value : "";
+  if (["home", "virus", "ransom", "behavior", "settings"].includes(page)) {
+    await render();
+    if (keep && $("#cpath")) $("#cpath").value = keep;
+  }
+}
+function go(p) {
+  page = p;
+  document.querySelectorAll("nav button").forEach((b) => b.classList.toggle("on", b.dataset.p === p));
+  render();
+}
+document.querySelectorAll("nav button").forEach((b) => b.onclick = () => go(b.dataset.p));
+refresh().then(render);
+timer = setInterval(refresh, 3000);
+</script>
+</body>
+</html>
