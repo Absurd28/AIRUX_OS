@@ -1,0 +1,17 @@
+#!/bin/sh
+# AIRUX Drivers: the app window (its server runs as you; fixes ask an administrator through polkit)
+f="${XDG_STATE_HOME:-$HOME/.local/state}/airux-drivers/ui.token"
+alive() { [ -r "$f" ] && read -r port token < "$f" && curl -fs -o /dev/null -m 2 "http://127.0.0.1:$port/icon.svg"; }
+if ! alive; then
+    rm -f "$f"
+    PYTHONPATH=/usr/lib/airux-drivers setsid /usr/bin/python3 -s -m airux_drivers.app >/dev/null 2>&1 &
+    i=0
+    until alive; do
+        i=$((i + 1)); [ "$i" -gt 40 ] && { notify-send -a "AIRUX Drivers" "AIRUX Drivers did not start."; exit 1; }
+        sleep 0.25
+    done
+fi
+read -r port token < "$f"
+exec chromium --app="http://127.0.0.1:$port/" --class=airux-drivers --window-size=1040,760 \
+    --no-first-run --noerrdialogs --password-store=basic \
+    --user-data-dir="${XDG_DATA_HOME:-$HOME/.local/share}/airux-drivers/ui-profile"

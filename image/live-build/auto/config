@@ -1,12 +1,13 @@
 #!/bin/sh
 # AIRUX 0.1 live image: Debian 13 (trixie), KDE Plasma 6 (Windows 11 layout), Calamares, AIRA.
-# Areas: main + non-free-firmware (real firmware for Wi-Fi, GPUs, CPUs). Not contrib: its firmware
-# *installer* packages (e.g. firmware-b43-installer) download blobs from third-party sites at build
-# time. The NVIDIA driver (non-free) is enabled after install (phase 9); the ISO is CPU-only.
+# Areas: main, non-free-firmware (firmware for Wi-Fi, GPUs, CPUs, audio), and contrib + non-free so
+# AIRUX Drivers can install NVIDIA's driver (nvidia-open-kernel-dkms is in contrib). Nothing from
+# contrib that downloads at build time is installed (firmware-b43-installer and the like are not
+# listed). The ISO itself stays CPU-only for the model; AIRUX Drivers installs the NVIDIA driver.
 set -e
 lb config noauto \
     --distribution trixie \
-    --archive-areas "main non-free-firmware" \
+    --archive-areas "main contrib non-free non-free-firmware" \
     --debian-installer none \
     --binary-images iso-hybrid \
     --bootloaders "grub-efi,syslinux" \

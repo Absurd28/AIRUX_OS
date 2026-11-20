@@ -1,0 +1,9 @@
+[Unit]
+Description=AIRUX Drivers: refresh firmware errors (devices plugged in later)
+
+[Timer]
+OnBootSec=20s
+OnUnitActiveSec=5min
+
+[Install]
+WantedBy=timers.target

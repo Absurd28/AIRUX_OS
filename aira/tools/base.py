@@ -15,8 +15,8 @@ from typing import Any, Callable
 
 MAX_TOOLS_PER_AGENT = 8
 # Tuned after phase 6: the Desktop agent gets a 9th tool, the browser; after phase 9 the System agent
-# gets a 9th, `security` (Phagos, the antivirus).
-TOOL_CAP = {"desktop": 9, "system": 9}
+# gets a 9th, `security` (Phagos, the antivirus), and a 10th, `hardware` (AIRUX Drivers).
+TOOL_CAP = {"desktop": 9, "system": 10}
 
 
 def tool_cap(agent: str) -> int:

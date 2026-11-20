@@ -1,0 +1,8 @@
+[Unit]
+Description=AIRUX Drivers: firmware the kernel could not load (readable by users)
+After=systemd-journald.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/airux-drivers collect
+StandardOutput=null

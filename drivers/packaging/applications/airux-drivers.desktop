@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=AIRUX Drivers
+GenericName=Drivers and hardware
+Comment=Check your hardware and install drivers and firmware (Wi-Fi, Bluetooth, NVIDIA, sound)
+Exec=airux-drivers-app
+Icon=airux-drivers
+Terminal=false
+Categories=System;Settings;HardwareSettings;
+Keywords=driver;drivers;hardware;device manager;firmware;nvidia;wifi;bluetooth;sound;
+StartupWMClass=airux-drivers

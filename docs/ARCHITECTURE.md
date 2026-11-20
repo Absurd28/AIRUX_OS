@@ -193,6 +193,20 @@ These hallucination controls are implemented in code, not only in prompts.
   quote is checked against the page, and answers that quote nothing are tagged unverified. Outside
   the desktop (tests, no NEOX), AIRA falls back to Chromium driven through Playwright.
 
+## AIRUX Drivers
+
+- **Inventory** from sysfs and /proc only (PCI/USB devices and their bound drivers, network
+  interfaces, rfkill, Bluetooth, DRM, ALSA, video4linux, input, power supply, the Secure Boot EFI
+  variable), plus the kernel's firmware load failures, which a root timer copies to
+  `/run/airux-drivers/kernel.json` because users cannot read the kernel log.
+- **Diagnosis** per category: working, needs firmware (file → package from Debian's Contents
+  index; backports when the package is installed but too old), switched off, no driver, or better
+  driver available (NVIDIA by GPU generation: open kernel modules for Turing and newer).
+- **Fixes** through `airux-drivers-helper` (pkexec, polkit `org.airux.drivers.manage`): an
+  allowlist of packages (firmware, microcode, NVIDIA, headers, printer drivers), apt sources for
+  contrib/non-free/backports only when missing, rfkill, fwupd, then a fresh diagnosis.
+- AIRA's `hardware` tool (System agent): status, check one part, fix (confirmation; read back).
+
 ## Phagos (antivirus)
 
 Phagos (from phagocyte) is AIRUX's own antivirus. It is standard-library Python, packaged as

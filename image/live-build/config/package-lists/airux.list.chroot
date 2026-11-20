@@ -97,6 +97,49 @@ gwenview
 okular
 partitionmanager
 
+# --- hardware: firmware the kernel's drivers load (Wi-Fi, Bluetooth, GPUs, laptop audio, cameras)
+# and CPU microcode. Listed one by one: the image is built without Recommends, so before this list
+# AIRUX shipped no firmware at all (no Wi-Fi, Bluetooth or microphone on a real laptop).
+# Not firmware-qcom-soc: 305 MB for ARM phones and boards.
+firmware-linux-free
+firmware-misc-nonfree
+firmware-iwlwifi
+firmware-mediatek
+firmware-realtek
+firmware-atheros
+firmware-brcm80211
+firmware-libertas
+firmware-ti-connectivity
+firmware-amd-graphics
+firmware-intel-graphics
+firmware-nvidia-graphics
+firmware-intel-sound
+firmware-sof-signed
+firmware-cirrus
+firmware-intel-misc
+bluez-firmware
+intel-microcode
+amd64-microcode
+# graphics: Vulkan and hardware video decoding
+mesa-vulkan-drivers
+va-driver-all
+intel-media-va-driver
+# printers and scanners (driverless IPP; HP and Gutenprint drivers for older models)
+cups
+cups-filters
+ipp-usb
+printer-driver-gutenprint
+hplip
+sane-airscan
+# devices: firmware updates from vendors (LVFS), Thunderbolt, hardware listing, Secure Boot keys,
+# NVIDIA driver recommendation (used by AIRUX Drivers)
+fwupd
+bolt
+pciutils
+usbutils
+mokutil
+nvidia-detect
+
 # --- offline games (KDE games: they match the desktop and need no internet). Start -> Games.
 # Knights plays chess against Stockfish (listed: the image is built without Recommends).
 knights

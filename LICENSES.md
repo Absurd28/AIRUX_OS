@@ -50,3 +50,13 @@ synthesis in a separate process as is done for Piper.
 | Component | Use | Licence | Source |
 | --- | --- | --- | --- |
 | Phagos (engines, rules, daemon, app) | AIRUX's antivirus | MIT, like the rest of AIRUX | this repository (phagos/) |
+
+## Firmware and drivers
+
+| Component | Use | Licence | Source |
+| --- | --- | --- | --- |
+| AIRUX Drivers | Hardware diagnosis and driver/firmware installs | MIT, like the rest of AIRUX | this repository (drivers/) |
+| Debian firmware packages (firmware-iwlwifi, -mediatek, -realtek, -atheros, -brcm80211, -amd-graphics, -intel-graphics, -nvidia-graphics, -sof-signed, -misc-nonfree and others) | Firmware loaded by the kernel's drivers | Redistributable, non-free firmware licences of each vendor (see /usr/share/doc/<package>/copyright) | Debian non-free-firmware, unmodified |
+| intel-microcode, amd64-microcode | CPU microcode updates | Vendor redistribution licences | Debian non-free-firmware |
+| NVIDIA driver (installed on request, not shipped) | GPU driver | NVIDIA licence (non-free); open kernel modules MIT/GPL-2.0 | Debian non-free / contrib |
+

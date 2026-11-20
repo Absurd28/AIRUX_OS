@@ -425,3 +425,15 @@ def test_fallback_is_speakable():
     s = guard.compact({"path": "/home/a", "total_gib": 2.89, "free_gib": 2.82, "used_percent": 2.6,
                        "due": "2026-11-14T18:52", "temperature_c": 47})
     assert s == "path: /home/a; total 2.89 GiB; free 2.82 GiB; used 2.6%; due: 2026-11-14 18:52; temperature 47 °C"
+
+
+def test_a_repeated_identical_lookup_ends_in_a_reply(home, tmp_path):
+    """A small model asking the same read-only tool again (same answer) is made to reply."""
+    from aira.agents import REPLY_ONLY
+    orch, llm, executed = make(home, tmp_path, [route("system", "how is the machine"),
+                                                call("system_info"), call("system_info"),
+                                                reply("It is running fine.")])
+    turn = orch.handle("How is my computer doing?")
+    assert executed == ["system_info", "system_info"]
+    assert llm.calls[-1]["schema"] == REPLY_ONLY
+    assert turn.runs[0].outcome != "step_limit"

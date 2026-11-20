@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AIRUX Drivers</title>
+<style>
+  :root { --bg:#0b1016; --panel:#131b25; --line:#223040; --text:#e6e9ee; --muted:#8b95a3; --blue:#7cc4ff; --green:#59c38a;
+          --amber:#f0b45a; --red:#ff7a7a; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 Inter, "DejaVu Sans", system-ui, sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 26px 24px 40px; }
+  header { display:flex; align-items:center; gap:14px; margin-bottom: 18px; }
+  header img { width:44px; height:44px; }
+  h1 { font-size:22px; margin:0; } .muted { color:var(--muted); }
+  .hero { display:flex; align-items:center; gap:16px; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px 18px; margin-bottom:16px; }
+  .dot { width:44px; height:44px; border-radius:50%; display:grid; place-items:center; font-size:22px; flex:none; }
+  .ok { background:#173326; color:var(--green); } .warn { background:#3a2e17; color:var(--amber); } .bad { background:#3a1b1b; color:var(--red); }
+  .info { background:#172a3a; color:var(--blue); }
+  .list { display:grid; gap:10px; }
+  .row { display:flex; align-items:center; gap:14px; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px; }
+  .row .ic { font-size:22px; width:30px; text-align:center; flex:none; }
+  .row .body { flex:1; min-width:0; } .row b { display:block; } .row .dev { color:var(--muted); font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .badge { font-size:12px; padding:3px 10px; border-radius:999px; white-space:nowrap; }
+  button { font:inherit; color:var(--text); background:#172230; border:1px solid var(--line); border-radius:8px; padding:7px 14px; cursor:pointer; white-space:nowrap; }
+  button:hover { border-color:var(--blue); } button.primary { background:linear-gradient(90deg,#2f6f9c,#2f8a5f); border-color:transparent; font-weight:600; }
+  button:disabled { opacity:.5; cursor:default; }
+  h2 { font-size:15px; margin:24px 0 10px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:10px; }
+  pre { background:#0a0f15; border:1px solid var(--line); border-radius:8px; padding:10px; max-height:240px; overflow:auto;
+        font:12px/1.4 "JetBrains Mono", monospace; white-space:pre-wrap; margin:10px 0 0; }
+  .toolbar { display:flex; gap:10px; flex-wrap:wrap; }
+  table { width:100%; border-collapse:collapse; font-size:13px; } td { padding:6px 6px; border-bottom:1px solid var(--line); }
+  .mono { font-family:"JetBrains Mono", monospace; font-size:12px; }
+</style>
+</head>
+<body>
+<main>
+  <header><img src="/icon.svg" alt=""><div><h1>AIRUX Drivers</h1><div class="muted">Your hardware, whether each part works, and the fix.</div></div>
+    <div style="margin-left:auto" class="toolbar"><button onclick="refresh(true)">Check again</button><button onclick="saveReport()">Save hardware report</button></div></header>
+  <div id="live"></div>
+  <div class="hero" id="hero"><div class="dot info">…</div><div><b>Checking your hardware…</b></div></div>
+  <div id="job"></div>
+  <div class="list" id="list"></div>
+  <h2>Device firmware updates</h2>
+  <div class="card" id="fw"><div class="row" style="border:none;padding:0;background:none"><div class="body"><b>Firmware from your device makers (LVFS)</b>
+    <span class="muted">Updates for the BIOS/UEFI, SSDs, docks and other devices that support it. Needs the internet.</span></div>
+    <button onclick="fwCheck()">Check for updates</button></div><div id="fwlist"></div></div>
+  <h2>All devices</h2>
+  <div class="card"><table id="devs"></table></div>
+</main>
+<script>
+"use strict";
+const TOKEN = "__TOKEN__";
+const ICON = { wifi: "📶", ethernet: "🔌", bluetooth: "🔷", graphics: "🖥️", sound: "🔊", camera: "📷", input: "⌨️", battery: "🔋" };
+const STATUS = { working: ["ok", "Working"], needs_firmware: ["bad", "Needs firmware"], off: ["warn", "Switched off"],
+  better_driver: ["info", "Better driver available"], no_driver: ["bad", "No driver"], not_found: ["", "Not present"] };
+const $ = (s) => document.querySelector(s);
+const esc = (x) => String(x ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let S = null, poll = null;
+
+async function api(method, params = {}) {
+  const r = await fetch("/api", { method: "POST", headers: { "Content-Type": "application/json", "X-Token": TOKEN }, body: JSON.stringify({ method, params }) });
+  const out = await r.json();
+  if (!out.ok) throw new Error(out.error || "failed");
+  return out;
+}
+function hero() {
+  const sm = S.summary;
+  const [cls, icon, title, sub] = sm.all_working ? ["ok", "✓", "All your hardware works", "Every device has its driver and firmware."]
+    : [sm.fixable ? "warn" : "bad", "!", `${sm.problems} thing${sm.problems === 1 ? "" : "s"} need${sm.problems === 1 ? "s" : ""} attention`,
+       sm.fixable ? `${sm.fixable} can be fixed here.` : "See the details below."];
+  $("#hero").innerHTML = `<div class="dot ${cls}">${icon}</div><div><b>${esc(title)}</b><div class="muted">${esc(sub)} Secure Boot: ${esc(S.secure_boot)}.</div></div>`;
+  $("#live").innerHTML = S.live ? `<div class="card" style="border-color:#5a4a20">You are running AIRUX from the USB stick: drivers installed now last until you shut down. Install AIRUX to keep them.</div>` : "";
+}
+function rows() {
+  $("#list").innerHTML = S.findings.filter((f) => f.status !== "not_found" || ["wifi", "bluetooth", "sound"].includes(f.category)).map((f, i) => {
+    const [cls, label] = STATUS[f.status];
+    const fix = f.fix ? `<button class="primary" onclick="fix('${f.category}')">${esc(f.fix.label)}</button>` : "";
+    return `<div class="row"><div class="ic">${ICON[f.category] || "•"}</div><div class="body"><b>${esc(f.title)}</b>
+      <div class="dev">${esc(f.device || "")}</div><div class="muted">${esc(f.detail)}</div></div>
+      <span class="badge ${cls}">${label}</span>${fix}</div>`;
+  }).join("");
+  $("#devs").innerHTML = S.devices.map((d) => `<tr><td class="mono">${esc(d.bus)} ${esc(d.address)}</td><td class="mono">${esc(d.id)}</td>
+    <td>${esc(d.name)}</td><td class="mono">${esc(d.driver || "(no driver)")}</td></tr>`).join("");
+}
+async function refresh() {
+  try { S = await api("status"); hero(); rows(); } catch (e) { $("#hero").innerHTML = `<div class="dot bad">!</div><div>${esc(e.message)}</div>`; }
+}
+function showJob(j) {
+  if (!j) { $("#job").innerHTML = ""; return; }
+  const res = j.result;
+  let tail = "";
+  if (res && res.ok && res.enroll_key) tail = `<div style="margin-top:10px">Secure Boot is on, so the new NVIDIA module must be trusted once:
+      <button class="primary" onclick="api('enroll_key')">Enroll the driver key</button> then restart, and on the blue screen choose
+      <b>Enroll MOK → Continue → Yes</b> and type the password you chose.</div>`;
+  else if (res && res.ok) tail = `<div style="margin-top:10px">✓ Done.${res.restart_needed ? " Restart to start using it." : ""}</div>`;
+  else if (res) tail = `<div style="margin-top:10px;color:var(--red)">${esc(res.error)}</div>`;
+  $("#job").innerHTML = `<div class="card"><b>${esc(j.title)}</b> ${j.done ? "" : '<span class="muted">working…</span>'}<pre>${esc(j.lines.join("\n"))}</pre>${tail}</div>`;
+}
+async function fix(cat) {
+  try {
+    const out = await api("fix", { category: cat });
+    showJob(out.job);
+    clearInterval(poll);
+    poll = setInterval(async () => {
+      const j = (await api("job")).job;
+      showJob(j);
+      if (j && j.done) { clearInterval(poll); poll = null; refresh(); }
+    }, 1000);
+  } catch (e) { alert(e.message); }
+}
+async function saveReport() {
+  try { const out = await api("report"); alert("Saved: " + out.saved); } catch (e) { alert(e.message); }
+}
+async function fwCheck() {
+  $("#fwlist").innerHTML = '<div class="muted" style="margin-top:8px">Asking fwupd…</div>';
+  try {
+    const out = await api("fwupd");
+    if (!out.devices.length) { $("#fwlist").innerHTML = `<div style="margin-top:8px">✓ No firmware updates${out.note ? " (" + esc(out.note) + ")" : ""}. (Run “Refresh” in Discover to fetch the latest list.)</div>`; return; }
+    $("#fwlist").innerHTML = `<table>${out.devices.map((d) => `<tr><td>${esc(d.name)}</td><td class="mono">${esc(d.current)} → ${esc(d.new)}</td><td class="muted">${esc(d.summary)}</td></tr>`).join("")}</table>
+      <div style="margin-top:8px"><button class="primary" onclick="fwUpdate()">Install firmware updates</button></div>`;
+  } catch (e) { $("#fwlist").innerHTML = `<div style="color:var(--red)">${esc(e.message)}</div>`; }
+}
+async function fwUpdate() {
+  if (!confirm("Install device firmware updates now? Keep the computer plugged in; some updates finish at the next restart.")) return;
+  const out = await api("fwupd_update"); showJob(out.job);
+  clearInterval(poll);
+  poll = setInterval(async () => { const j = (await api("job")).job; showJob(j); if (j && j.done) { clearInterval(poll); poll = null; } }, 1000);
+}
+refresh();
+setInterval(() => { if (!poll) refresh(); }, 15000);
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+#!/usr/bin/python3 -I
+# AIRUX Drivers' root helper (run through pkexec; polkit action org.airux.drivers.manage).
+# -I: no environment variables or user site-packages can change what runs as root.
+import sys
+sys.path.insert(0, "/usr/lib/airux-drivers")
+from airux_drivers.helper import main
+sys.exit(main())

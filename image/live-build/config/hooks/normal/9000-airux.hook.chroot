@@ -63,7 +63,7 @@ fi
 k=/usr/share/plasma/plasmoids/org.kde.plasma.kickoff/contents/config/main.xml
 if [ -f "$k" ]; then
     dpkg-divert --quiet --local --rename --add "$k"
-    sed 's|<default>preferred://browser,org.kde.kontact.desktop,systemsettings.desktop,org.kde.dolphin.desktop,org.kde.discover.desktop</default>|<default>airox-code.desktop,org.kde.dolphin.desktop,preferred://browser,org.kde.konsole.desktop,systemsettings.desktop,aira.desktop,aira-settings.desktop,phagos-security.desktop,org.kde.discover.desktop,org.kde.kwrite.desktop,org.kde.kcalc.desktop,org.kde.spectacle.desktop,org.kde.okular.desktop,org.kde.gwenview.desktop</default>|' \
+    sed 's|<default>preferred://browser,org.kde.kontact.desktop,systemsettings.desktop,org.kde.dolphin.desktop,org.kde.discover.desktop</default>|<default>airox-code.desktop,org.kde.dolphin.desktop,preferred://browser,org.kde.konsole.desktop,systemsettings.desktop,aira.desktop,aira-settings.desktop,phagos-security.desktop,airux-drivers.desktop,org.kde.discover.desktop,org.kde.kwrite.desktop,org.kde.kcalc.desktop,org.kde.spectacle.desktop,org.kde.okular.desktop,org.kde.gwenview.desktop</default>|' \
         "$k.distrib" > "$k"
     grep -q "<default>airox-code.desktop," "$k"
 fi

@@ -1,0 +1,3 @@
+#!/bin/sh
+# AIRUX Drivers from a terminal: airux-drivers status | report | fix CATEGORY
+PYTHONPATH=/usr/lib/airux-drivers exec /usr/bin/python3 -s -m airux_drivers.cli "$@"

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- AIRUX Drivers: a chip with a check mark -->
+  <defs>
+    <linearGradient id="dr-tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1a2532"/><stop offset="1" stop-color="#0b1016"/>
+    </linearGradient>
+    <linearGradient id="dr-ink" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7cc4ff"/><stop offset="1" stop-color="#59c38a"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="url(#dr-tile)"/>
+  <rect x="9.5" y="9.5" width="237" height="237" rx="54.5" fill="none" stroke="#2b3a4b" stroke-width="3"/>
+  <g stroke="url(#dr-ink)" stroke-width="10" stroke-linecap="round">
+    <path d="M100 52 V72 M128 52 V72 M156 52 V72 M100 184 V204 M128 184 V204 M156 184 V204"/>
+    <path d="M52 100 H72 M52 128 H72 M52 156 H72 M184 100 H204 M184 128 H204 M184 156 H204"/>
+  </g>
+  <rect x="72" y="72" width="112" height="112" rx="20" fill="#121a23" stroke="url(#dr-ink)" stroke-width="10"/>
+  <path d="M102 130 L120 148 L156 108" fill="none" stroke="#e8f6ef" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

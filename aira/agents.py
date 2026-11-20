@@ -24,7 +24,8 @@ PERSONA = ("You are part of AIRA (Adaptive Intelligent Research Assistant), the 
 
 ROLES = {
     "system": "You are AIRA's System agent: settings, power, network, services, packages, GPU and disk health, "
-              "and Phagos, the antivirus (protection status, virus scans, threat history, quarantine).",
+              "Phagos, the antivirus (protection status, virus scans, threat history, quarantine), and AIRUX Drivers "
+              "(whether Wi-Fi, Bluetooth, graphics, sound and other hardware work, why not, and installing drivers).",
     "desktop": "You are AIRA's Desktop agent: files and folders (list, find by name, read, write, move, "
                "delete), applications, the clipboard, and the web browser (open pages, search the web in the "
                "browser, read and click).",
@@ -133,9 +134,11 @@ class SubAgent:
         evidence = guard.Evidence()
         evidence.add(command or task)
         evidence.add(task)
+        force_reply = False
         try:
             for _ in range(self.max_steps):
-                step = self.propose(messages)
+                # a read-only tool that answered the same twice has nothing more to give: reply now
+                step = self.propose(messages, schema=REPLY_ONLY) if force_reply else self.propose(messages)
                 tool, args = step.get("tool", ""), step.get("args", {})
                 if tool == "ask_user":
                     out.steps.append(Step(tool, args))
@@ -195,6 +198,11 @@ class SubAgent:
                     return out
                 messages.append({"role": "assistant", "content": json.dumps({"tool": tool, "args": args})})
                 messages.append({"role": "user", "content": _result_message(tool, decision.reason, result, s)})
+                if result.ok and not s.mutating and any(
+                        c.tool == tool and (c.result or {}).get("ok") and c.result.get("data") == s.result.get("data")
+                        for c in out.tool_calls[:-1]):
+                    out.guard_events.append(f"{tool} returned the same as before: replying")
+                    force_reply = True
         except LLMError as exc:
             ok_calls = [s for s in out.tool_calls if (s.result or {}).get("ok")]
             if "truncated" in str(exc) and ok_calls:

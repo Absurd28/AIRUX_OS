@@ -1,0 +1,12 @@
+#!/bin/sh
+set -e
+if [ "$1" = configure ]; then
+    if [ -d /run/systemd/system ]; then
+        systemctl daemon-reload || true
+        systemctl enable --now airux-drivers-collect.timer || true
+    else
+        systemctl enable airux-drivers-collect.timer 2>/dev/null || true
+    fi
+    command -v gtk-update-icon-cache >/dev/null && gtk-update-icon-cache -q -t /usr/share/icons/hicolor || true
+fi
+exit 0

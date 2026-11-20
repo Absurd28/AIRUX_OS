@@ -7,10 +7,10 @@ The phase each issue was found in is in brackets.
 
 - **No "Hey AIRA" wake word.** Push-to-talk (Talk button or Ctrl+Space) replaces it until a
   wake-word model is trained. [5]
-- **No NVIDIA driver in the ISO.** It is CPU-only by choice: no non-free driver, and a smaller
-  image. On an NVIDIA machine the model runs on the CPU with `nouveau` for display. Installing
-  `nvidia-driver` afterwards and restarting `aira-llm` lets the profiler use the GPU, but this path
-  is untested. [8]
+- **NVIDIA's driver is not preinstalled.** AIRUX Drivers installs it in one click (online: about
+  300 MB, built for the running kernel with DKMS); with Secure Boot on, its signing key must be
+  enrolled once at the next boot (blue MOK screen). Until then the model runs on the CPU and the
+  display on `nouveau`. Tested only as a simulated install in QEMU (no NVIDIA GPU there).
 - **Only the 2B model ships in the ISO.** Bigger tiers are downloaded after the first boot
   (`aira-models`, asks first). [8]
 - Nothing from the planned cut list was cut: the load controller, quorum, browser control and
@@ -132,6 +132,25 @@ The phase each issue was found in is in brackets.
 - **The KDE games are Debian's packages, unchanged,** so they follow the desktop's Breeze theme
   rather than AIRUX's colours.
 
+## Drivers and firmware
+
+- **AIRUX does not write drivers; it ships firmware and installs vendor drivers.** Linux's drivers
+  are in the kernel. Since this version the ISO includes Debian's firmware for Intel, MediaTek,
+  Realtek, Atheros and Broadcom Wi-Fi and Bluetooth, AMD/Intel/NVIDIA graphics, Intel SOF laptop
+  audio and CPU microcode (about 0.4 GB). Earlier ISOs shipped none, which is why Wi-Fi, Bluetooth
+  and the microphone failed on a real laptop.
+- **Not included:** firmware-qcom-soc (ARM phones and boards), legacy NVIDIA drivers (Kepler and
+  older keep `nouveau`), and Broadcom's proprietary `wl` driver (needs a module build; most
+  Broadcom chips work with `brcmfmac`).
+- **Newer devices than Debian 13** can need newer firmware: AIRUX Drivers offers it from Debian
+  backports when the installed package lacks the file the kernel asked for.
+- **Intel IPU (MIPI) laptop cameras do not work** with Debian 13's kernel; AIRUX Drivers says so.
+- **In the live session, installed drivers last until shutdown.** Install AIRUX to keep them.
+- **Device firmware updates (fwupd)** need the internet and a device that LVFS supports.
+- **On the 2B model, AIRA's hardware answers often come out as "I'm not sure"**: she reads the
+  diagnosis, but her wording trips the "no 'done' without read-back" rule. The AIRUX Drivers app
+  and `airux-drivers status` show the same facts directly. Bigger tiers answer properly.
+
 ## Installer and image
 
 - **Installs are UEFI-only.** grub-pc conflicts with grub-efi-amd64 in the offline package pool.
@@ -143,7 +162,7 @@ The phase each issue was found in is in brackets.
     Xfce never starts. They are now started by XDG autostart.
   - The live account's name "AIRUX" was used as the user's name.
 - **Untested on real hardware so far:** Secure Boot (the stick boots through Debian's signed shim),
-  Wi-Fi firmware, laptop audio and microphones, suspend, screen lock. [9: see docs/DEMO.md]
+  the new firmware set, laptop audio and microphones, suspend, screen lock. [9: see docs/DEMO.md]
 
 ## Speed
 

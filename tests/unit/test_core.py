@@ -56,10 +56,10 @@ def log_entries(cfg: Config) -> list[dict]:
 
 def test_registry_shape(setup):
     _, reg, _ = setup
-    assert 30 <= len(reg.tools) <= 42      # ~30 in phase 2; + browser, security
+    assert 30 <= len(reg.tools) <= 43      # ~30 in phase 2; + browser, security, hardware
     for a in AGENTS:
         assert 1 <= len(reg.for_agent(a)) <= tool_cap(a)
-    assert tool_cap("desktop") == 9 and tool_cap("system") == 9
+    assert tool_cap("desktop") == 9 and tool_cap("system") == 10
     assert all(tool_cap(a) == MAX_TOOLS_PER_AGENT for a in AGENTS if a not in ("desktop", "system"))
     for t in reg.tools.values():
         s = t.args_schema()
