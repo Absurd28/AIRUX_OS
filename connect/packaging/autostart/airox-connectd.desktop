@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=AIROX Connect service
+Comment=Lets paired phones reach AIRA (only when allowed in AIROX Connect)
+Exec=airox-connectd
+Icon=airox-connect
+Terminal=false
+NoDisplay=true
+OnlyShowIn=KDE;
+X-KDE-autostart-phase=2

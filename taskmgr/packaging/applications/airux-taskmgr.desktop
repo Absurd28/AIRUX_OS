@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Task Manager
+GenericName=Task Manager
+Comment=See and end running apps and processes; CPU, memory, disk, network and GPU use; startup apps and services
+Exec=airux-taskmgr
+Icon=airux-taskmgr
+Terminal=false
+Categories=System;Monitor;
+Keywords=task manager;processes;end task;kill;performance;cpu;memory;startup;services;
+StartupWMClass=airux-taskmgr
+X-KDE-Shortcuts=Ctrl+Shift+Esc

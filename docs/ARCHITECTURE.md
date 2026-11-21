@@ -258,12 +258,71 @@ fanotify (close-write, open-exec-perm) ─► scanner ─► clean / suspicious 
   running or reported, the user decides; dangerous behaviour → paused until kill, quarantine or
   allow. Turning protection off, restoring and allowing need an administrator (polkit).
 
+## Task Manager
+
+AIRUX's own Task Manager (`taskmgr/`, package `airux-taskmgr`, Ctrl+Shift+Esc), laid out like
+Windows 11's: Processes, Performance, Startup apps, Users, Details and Services.
+
+- **Processes** come from `/proc`, grouped into **Apps** (the systemd `app-*.scope`/`.service`
+  cgroup Plasma starts every application in; its desktop file gives the name and icon),
+  **Background processes** (the user's other processes) and **System processes**. CPU is a share
+  of the whole machine; disk rates come from `/proc/<pid>/io`; GPU per process from `nvidia-smi pmon`.
+- **Performance:** CPU (total, per core, frequency), memory and swap, each disk (active time and
+  rates), each network interface, GPUs (NVIDIA via `nvidia-smi`, AMD and others via sysfs), each
+  with a 60-sample history.
+- **Actions pass AIRA's broker** with a registry of their own (caller `taskmgr`, not routable by
+  the model): ending a process or an app and stopping a service carry the new `stop` risk and
+  ask first; raising a priority or acting on another user's process needs root (pkexec);
+  a process is named by pid **and** start time, so a reused pid is never ended by mistake. Every
+  action is logged in AIRA's action log and read back ("ended", "running").
+- The window is a local web page (127.0.0.1, token) in a Chromium app window, like Phagos Security.
+  The same backend serves AIROX Connect.
+
+## AIROX Connect
+
+AIROX Connect links an Android phone or tablet to the PC on the same network
+(`connect/`, package `airox-connect`; the app is its own repository, [AIROX_Connect](https://github.com/Absurd28/AIROX_Connect); protocol in
+[CONNECT_PROTOCOL.md](CONNECT_PROTOCOL.md)).
+
+```text
+Android app ──TLS 1.3, PC certificate pinned from the QR code, device token──► airox-connectd (desktop session, :8766, LAN only)
+   REST: status, activity, Task Manager, files, clipboard, glance          │ every action -> AIRA's broker (registry "connect" or "taskmgr")
+   WebSocket /v1/ws: AIRA chat, confirmations, alerts, input             ├─► AIRA shell 127.0.0.1:8765 (/command, /events, /confirm, /voice_file)
+   WebSocket /v1/screen/stream: H.264 frames, touches back                ├─► desktop helper (Debian python3 + D-Bus): RemoteDesktop and
+   UDP 8767: find the PC again after its address changed                  │   ScreenCast portals, notification monitor
+                                                                          └─► GStreamer: pipewiresrc -> NVENC / VA-API / x264 (zero latency)
+```
+
+- **Off until the user turns on "Allow phone connections".** Pairing is a 120-second, single-use
+  QR code, and the person at the PC must click Allow. The phone pins the PC's certificate
+  fingerprint from the QR code; the PC keeps only the SHA-256 of each device token; addresses that
+  are not private, link-local or loopback are refused; failures are rate-limited.
+- **Confirmations go to the phone that asked**, through the same broker rules as AIRA (delete,
+  stop, root, install, sending files off the PC, power). For delete, root, install and commands,
+  the app also asks for the phone's screen lock. AIRA's own confirmations reach both the side panel
+  and the phone; the first answer counts.
+- **AIRA from the phone:** typed commands go to the shell's `/command`; spoken ones are recorded on
+  the phone (16 kHz WAV), transcribed by whisper.cpp on the PC through `/voice_file` (only files in
+  connectd's private runtime folder), and AIRA's Kokoro reply is played on the phone instead of the PC.
+- **Second screen:** KDE's ScreenCast chooser offers "New Virtual Output". Picked once (the choice
+  is remembered), it becomes a real extra monitor of 1920x1080 (KDE's fixed size), placed right
+  of the others. Frames go to the phone's hardware decoder in low-latency mode; the app shows the
+  measured delay from the PC to its screen. Touches move the pointer with relative moves only: KWin
+  applies those exactly inside one output but clamps jumps between outputs, so a touch walks the
+  pointer edge to edge to the virtual output's corner and then to the point.
+- **Also:** files both ways (resumable, SHA-256 checked, never overwritten), clipboard and links,
+  touchpad, keyboard and media keys (MPRIS, PipeWire volume), screen glance (Spectacle), lock,
+  sleep and Wake-on-LAN, desktop notifications mirrored to the phone, and AIRA's `phone` tool
+  (Assistant agent: send a file, ring the phone, its battery).
+
 ## Image
 
 - **Packages:**
   - `aira.deb` holds the app, a pinned virtual environment, CPU builds of llama.cpp and whisper.cpp,
     the systemd units, a polkit rule and the autostart entries.
   - `aira-models-base.deb` holds the 2B model, embeddings, whisper and Kokoro.
+  - `airux-taskmgr.deb` (Task Manager) and `airox-connect.deb` (AIROX Connect's PC side, with the
+    Android APK to share from the PC).
 - **First boot:** a profiler measures the hardware and recommends the right model tier, which
   `aira-models` downloads after asking.
 - **ISO:** a live-build image with AIRUX branding, KDE Plasma, the Calamares installer, Plymouth,

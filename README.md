@@ -63,6 +63,8 @@ prompts:
 | 🌐 **NEOX browser** | The AIRUX browser, built on Chromium's engine with Brave-style protection: **Shields** (uBlock Origin Lite), strict privacy defaults (HTTPS-only, third-party cookies blocked, no telemetry, DuckDuckGo), **Global Privacy Control**, fingerprinting protection, a **private window with Tor**, and **NEOX VPN**: a free VPN (RiseupVPN, Tor, or your own WireGuard) for NEOX alone or the whole computer, chosen when you connect, that can change country every *x* minutes. AIRA browses in it: say *"open the browser and search for X"*, or ask about the page you're reading in NEOX's AIRA side panel, where answers must quote the page. |
 | 🦠 **Phagos antivirus** | AIRUX's own antivirus, designed like an immune system: real-time protection (files are checked as they are written, and malicious programs are not allowed to start), in-house signature rules, **Negative Selection** and **Clonal Selection** (artificial immune system) and the **Dendritic Cell Algorithm** from Danger Theory, which pauses a program that starts encrypting your files and lets you decide. Quarantine, scans, protection history and a Windows Security-style app; ask AIRA "is my computer protected?" |
 | 🧩 **AIRUX Drivers** | Like Windows' Device Manager: shows whether Wi-Fi, Ethernet, Bluetooth, graphics, sound, camera, touchpad and battery work, and why a part does not (missing firmware, switched off, no driver). One click installs the fix, including **NVIDIA's driver** with the Secure Boot key step. It also does device firmware updates (fwupd) and saves a hardware report. The ISO ships Debian's firmware for Wi-Fi, Bluetooth, GPUs and laptop audio. Ask AIRA "why isn't my Wi-Fi working?" |
+| 📊 **Task Manager** | AIRUX's own Task Manager, like Windows 11's (**Ctrl+Shift+Esc**): apps, background and system processes with CPU, memory, disk and GPU use; live performance graphs for CPU, memory, disks, network and GPU; startup apps; users; details; services. Ending a program or stopping a service asks first and is logged, like every AIRA action. |
+| 📱 **AIROX Connect** | An Android app for your phone or tablet, paired with the PC by QR code, on the same network: talk to AIRA by text or voice (she answers on the phone in her own voice), see running apps and what AIRA is doing, use the Task Manager, send files and media both ways, share the clipboard and links, use the phone as touchpad, keyboard and media remote, glance at the screen, make the phone or tablet a **second screen** with touch, lock, sleep or wake the PC, and get AIRA's reminders and Phagos alerts as notifications. Encrypted to your PC's own certificate, and every action passes AIRA's permission broker (risky ones are approved on the phone). |
 | 🎮 **Offline games** | Chess against Stockfish (Knights), Sudoku, Solitaire, Mahjongg, Minesweeper, Reversi, Four in a Row, Gomoku, nonograms, falling blocks, Breakout and more from KDE, plus **AIRUX Snake**, our own take on the classic snake game. All of them work without internet. |
 | 💿 **Real OS image** | A live ISO with AIRUX branding, a Plymouth splash and the Calamares installer. It is tested end to end in QEMU: boot, install, then AIRA answering by voice. |
 
@@ -88,8 +90,8 @@ come from the real local model (the 2B tier, on 4 CPU cores), and pages are real
 | <img src="docs/screenshots/tour-11-about.png" width="420"/> | <img src="docs/screenshots/tour-12-installer.png" width="420"/> |
 | **AIRUX Drivers** | **Phagos pauses a ransomware-like program** |
 | <img src="docs/screenshots/drivers-app.png" width="420"/> | <img src="docs/screenshots/phagos-3-ransomware-paused.png" width="420"/> |
-| **Phagos Security** | |
-| <img src="docs/screenshots/phagos-5-app.png" width="420"/> | |
+| **Phagos Security** | **Task Manager (Ctrl+Shift+Esc)** |
+| <img src="docs/screenshots/phagos-5-app.png" width="420"/> | <img src="docs/screenshots/task-manager.png" width="420"/> |
 | **Installer finished** | **Installed system** |
 | <img src="docs/screenshots/vm-install-done.png" width="420"/> | <img src="docs/screenshots/vm-installed-desktop.png" width="420"/> |
 
@@ -184,6 +186,17 @@ Get-FileHash .\airux-0.1-amd64.hybrid.iso -Algorithm SHA256   # Windows
 The full guide, with troubleshooting (no boot, black screen, no sound, no microphone), is in
 **[docs/USB.md](docs/USB.md)**. A five-command demo for new hardware is in
 **[docs/DEMO.md](docs/DEMO.md)**.
+
+### Step 6: Connect your Android phone (optional)
+
+1. On the PC, open **AIROX Connect** from the Start menu and turn on **Allow phone connections**.
+2. Get the app: click **Share the app** and scan the code with the phone's camera (or copy
+   `/usr/share/airox-connect/airox-connect.apk` to the phone). Open the file and allow installing
+   from that source. Android 10 or newer.
+3. In the app tap **Scan the pairing code**, then click **Show pairing code** on the PC and point the
+   phone at it. Click **Allow** on the PC.
+4. The phone and the PC must be on the same network. For the second screen and the touchpad, KDE asks
+   on the PC once ("Screen Sharing": choose **New Virtual Output**; "Remote control": **Share**).
 
 ### Option B: Add AIRA to an existing Debian 13 system
 
@@ -321,6 +334,9 @@ drivers/         AIRUX Drivers: hardware inventory and diagnosis, root helper, a
 phagos/          Phagos antivirus: engines (rules, NSA, CLONALG, DCA), daemon, agent, app, rules
 neox/            NEOX browser: extension (AIRA bridge, side panel, new tab, privacy), launchers, policies
 neox/vpn/        NEOX VPN: neox-vpnd (Riseup, Tor, WireGuard; only-NEOX namespace or whole computer; hopping)
+taskmgr/         AIRUX Task Manager: processes, performance, startup apps, services; actions through the broker
+connect/         AIROX Connect, PC side: airox-connectd (pairing, TLS, REST + WebSockets), desktop helper, window
+                 (the Android app is its own repository: https://github.com/Absurd28/AIROX_Connect)
 image/           live-build configuration for the AIRUX ISO
 packaging/       systemd units, polkit rule, branding, Debian packaging
 scripts/         build llama.cpp / whisper.cpp, fetch models, build .deb and ISO, QEMU control
@@ -344,6 +360,10 @@ docs/            architecture, USB guide, demo, evaluation reports
 - [x] NEOX VPN: free VPN (Riseup, Tor, your WireGuard) for NEOX or the whole computer, with country hopping
 - [x] Phagos: an in-house antivirus built on artificial immune systems and Danger Theory
 - [x] AIRUX Drivers: firmware for real hardware, NVIDIA driver installs, hardware diagnosis
+- [x] AIRUX Task Manager (Ctrl+Shift+Esc)
+- [x] AIROX Connect for Android: AIRA, Task Manager, files, touchpad and second screen from the phone (same network)
+- [ ] AIROX Connect from other networks (a Tor onion service: no account, no port forwarding)
+- [ ] AIROX Connect for iOS
 - [ ] Real-hardware validation across more laptops
 - [ ] "Hey AIRA" wake word (openWakeWord)
 - [ ] Optional NVIDIA driver in the image

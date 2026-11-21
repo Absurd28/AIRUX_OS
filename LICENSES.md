@@ -62,6 +62,19 @@ synthesis in a separate process as is done for Piper.
 | nftables | Tor whole-computer redirect | GPL-2.0 | Debian package `nftables` |
 | RiseupVPN service | Free VPN gateways (used, not shipped) | Riseup's terms of service, https://riseup.net/en/vpn | riseup.net |
 
+## AIROX Connect and Task Manager
+
+| Component | Use | Licence | Source |
+| --- | --- | --- | --- |
+| AIROX Connect (airox-connectd, the PC window, the Android app) and AIRUX Task Manager | Phone link and task manager | MIT, like the rest of AIRUX | this repository (connect/, taskmgr/); the app: https://github.com/Absurd28/AIROX_Connect |
+| AndroidX (Core, Activity, Fragment, Lifecycle, Biometric, CameraX), Jetpack Compose, Material 3, Material icons | The Android app's UI and platform libraries | Apache-2.0 | https://developer.android.com/jetpack/androidx |
+| Kotlin standard library, kotlinx.coroutines | The Android app's language runtime | Apache-2.0 | https://kotlinlang.org |
+| OkHttp 4.12 and Okio | HTTPS and WebSocket in the app | Apache-2.0 | https://square.github.io/okhttp/ |
+| ZXing core 3.5.3 | Reading the pairing QR code in the app | Apache-2.0 | https://github.com/zxing/zxing |
+| GStreamer (base, good, bad, ugly, PipeWire plugin), x264 | Second-screen video encoding, run as a separate program (`gst-launch-1.0`) | LGPL-2.1-or-later; x264 GPL-2.0-or-later | Debian packages `gstreamer1.0-*` |
+| qrencode | The pairing QR code on the PC, run as a separate program | LGPL-2.1-or-later | Debian package `qrencode` |
+| playerctl, wl-clipboard, python3-dbus, python3-gi | Media keys, clipboard, portal access | LGPL-3.0 / GPL-3.0 / MIT / LGPL-2.1 (each a separate program or Debian's Python bindings) | Debian packages |
+
 ## Firmware and drivers
 
 | Component | Use | Licence | Source |

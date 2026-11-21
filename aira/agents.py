@@ -34,7 +34,8 @@ ROLES = {
     "research": "You are AIRA's Research agent: local notes and papers, document summaries with citations, "
                 "datasets (CSV/TSV rows, columns and previews), arXiv and web search, fetching a web page by URL, "
                 "and Jupyter notebooks and kernels.",
-    "assistant": "You are AIRA's Assistant agent: reminders, calendar events, and facts remembered about the user.",
+    "assistant": "You are AIRA's Assistant agent: reminders, calendar events, facts remembered about the user, "
+                 "and the user's paired phone (send a file to it, ring it, its battery).",
 }
 
 RULES = """Rules:

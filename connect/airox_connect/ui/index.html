@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AIROX Connect</title>
+<style>
+  :root { --bg:#0b1016; --panel:#131b25; --line:#223040; --text:#e6e9ee; --muted:#8b95a3; --blue:#7cc4ff; --green:#59c38a;
+          --amber:#f0b45a; --red:#ff7a7a; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 Inter, "DejaVu Sans", system-ui, sans-serif; }
+  main { max-width:880px; margin:0 auto; padding:24px 24px 40px; }
+  header { display:flex; align-items:center; gap:14px; margin-bottom:18px; }
+  header img { width:44px; height:44px; } h1 { font-size:22px; margin:0; } .muted { color:var(--muted); }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px 18px; margin-bottom:14px; }
+  .row { display:flex; align-items:center; gap:14px; }
+  .grow { flex:1; min-width:0; } h2 { font-size:15px; margin:0 0 4px; }
+  button { font:inherit; color:var(--text); background:#172230; border:1px solid var(--line); border-radius:8px; padding:7px 14px; cursor:pointer; white-space:nowrap; }
+  button:hover { border-color:var(--blue); } button.primary { background:linear-gradient(90deg,#2f6f9c,#2f8a5f); border-color:transparent; font-weight:600; }
+  button.danger { background:#3a1b1b; border-color:#5a2a2a; } button:disabled { opacity:.5; cursor:default; }
+  .switch { position:relative; width:46px; height:24px; border-radius:12px; background:#2a3848; cursor:pointer; border:none; padding:0; flex:none; }
+  .switch::after { content:""; position:absolute; left:3px; top:3px; width:18px; height:18px; border-radius:50%; background:#c9d1db; transition:.15s; }
+  .switch.on { background:#2f8a5f; } .switch.on::after { left:25px; background:#fff; }
+  .qr { display:flex; gap:20px; align-items:center; margin-top:14px; }
+  .qr img { width:220px; height:220px; background:#fff; border-radius:10px; padding:6px; }
+  .req { background:#172a3a; border:1px solid #2f6f9c; border-radius:12px; padding:12px 14px; margin-top:12px; }
+  .dev { display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid var(--line); }
+  .dev:first-of-type { border-top:none; }
+  .dot { width:10px; height:10px; border-radius:50%; background:#3a4756; flex:none; } .dot.on { background:var(--green); }
+  .opt { display:flex; align-items:center; gap:12px; padding:8px 0; }
+  .note { font-size:12px; color:var(--muted); margin-top:8px; }
+  code { font:12px "JetBrains Mono", monospace; color:#c6ccd4; word-break:break-all; }
+</style>
+</head>
+<body>
+<main>
+  <header><img src="/logo.svg" alt=""><div class="grow"><h1>AIROX Connect</h1>
+    <div class="muted">Use AIRA, the Task Manager, files and your screen from your Android phone or tablet.</div></div></header>
+
+  <div class="card"><div class="row"><div class="grow"><h2>Allow phone connections</h2>
+    <div class="muted" id="netline">Phones on this network can connect after you pair them.</div></div>
+    <button class="switch" id="enable" aria-label="Allow phone connections"></button></div></div>
+
+  <div class="card"><div class="row"><div class="grow"><h2>Pair a phone</h2>
+    <div class="muted">Open AIROX Connect on the phone, tap <b>Pair with a PC</b> and scan the code. You confirm here.</div></div>
+    <button class="primary" id="pairBtn">Show pairing code</button></div>
+    <div id="pairArea"></div><div id="reqs"></div></div>
+
+  <div class="card"><h2>Paired phones and tablets</h2><div id="devs" class="muted">None yet.</div></div>
+
+  <div class="card"><div class="row"><div class="grow"><h2>Get the app</h2>
+    <div class="muted">Install AIROX Connect on Android straight from this PC (for 10 minutes, on this network only).</div></div>
+    <button id="appBtn">Share the app</button></div><div id="appArea"></div></div>
+
+  <div class="card"><h2>Options</h2>
+    <div class="opt"><button class="switch" id="optSilent"></button><div>AIRA answers spoken questions from the phone on the phone only (not out loud on the PC)</div></div>
+    <div class="opt"><button class="switch" id="optMirror"></button><div>Show all PC notifications on the phone (otherwise only AIRA, Phagos, Drivers and Task Manager)</div></div>
+    <div class="note">Phones connect only from this local network, over TLS 1.3 to this PC's own certificate. Every
+      action from a phone passes AIRA's permission broker: deleting, ending programs, sending files off the
+      PC and power actions are confirmed on the phone, and everything is written to AIRA's action log.
+      The second screen and touchpad need your one-time OK in KDE's "Screen Sharing" / "Remote control" window.</div>
+  </div>
+</main>
+<script>
+"use strict";
+const TOKEN = "__TOKEN__";
+const $ = (s) => document.querySelector(s);
+const esc = (x) => String(x ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const api = (method, params = {}) => fetch("/api", { method: "POST", headers: { "Content-Type": "application/json", "X-Token": TOKEN },
+  body: JSON.stringify({ method, params }) }).then((r) => r.json());
+let S = null, qrKey = "", appKey = "";
+const ago = (t) => { if (!t) return "never"; const s = Date.now() / 1000 - t; return s < 90 ? "just now" : s < 3600 ? Math.round(s / 60) + " min ago" : s < 86400 ? Math.round(s / 3600) + " h ago" : new Date(t * 1000).toLocaleDateString(); };
+
+$("#enable").onclick = async () => { S = await api("enable", { on: !S.enabled }); render(); };
+$("#pairBtn").onclick = async () => { if (S && S.pairing.active) await api("pair_cancel"); else await api("pair_start"); refresh(); };
+$("#appBtn").onclick = async () => { S = await api("share_app", { on: !S.app_share.on }); render(); };
+$("#optSilent").onclick = async () => { await api("settings", { pc_silent: !S.settings.pc_silent }); refresh(); };
+$("#optMirror").onclick = async () => { await api("settings", { mirror_all: !S.settings.mirror_all }); refresh(); };
+
+async function refresh() { try { S = await api("state"); render(); } catch (e) {} }
+setInterval(refresh, 1000); refresh();
+
+function render() {
+  $("#enable").classList.toggle("on", S.enabled);
+  $("#netline").innerHTML = S.enabled ? `On. This PC is <b>${esc(S.pc.name)}</b> at ${S.pc.addresses.map(esc).join(", ") || "no network address"}, port ${S.pc.port}.`
+    : "Off: no phone can reach this PC. Turn it on to pair or connect.";
+  $("#optSilent").classList.toggle("on", !!S.settings.pc_silent);
+  $("#optMirror").classList.toggle("on", !!S.settings.mirror_all);
+  const p = S.pairing;
+  $("#pairBtn").textContent = p.active ? "Stop pairing" : "Show pairing code";
+  if (p.active && p.uri) {
+    if (qrKey !== p.uri) { qrKey = p.uri;
+      $("#pairArea").innerHTML = `<div class="qr"><img src="/qr.svg?k=${encodeURIComponent(p.uri.slice(-12))}" alt="Pairing code">` +
+        `<div><b>Scan with AIROX Connect</b><div class="muted" id="countdown"></div><div class="note">The code works once, for two minutes.</div>` +
+        `<div class="note">No camera? Enter this link in the app:<br><code>${esc(p.uri)}</code></div></div></div>`; }
+  } else { qrKey = ""; $("#pairArea").innerHTML = ""; }
+  $("#reqs").innerHTML = p.requests.map((r) => `<div class="req row"><div class="grow"><b>${esc(r.name)}</b> <span class="muted">${esc(r.model)} · ${esc(r.ip)}</span>` +
+    `<div class="muted">wants to pair with this PC. Only allow a phone you are holding.</div></div>` +
+    `<button class="primary" data-a="${esc(r.id)}" data-y="1">Allow</button><button class="danger" data-a="${esc(r.id)}" data-y="0">Deny</button></div>`).join("");
+  $("#reqs").querySelectorAll("button").forEach((b) => b.onclick = () => api("approve", { id: b.dataset.a, yes: b.dataset.y === "1" }).then(refresh));
+  $("#devs").innerHTML = S.devices.length ? S.devices.map((d) => `<div class="dev"><span class="dot${d.online ? " on" : ""}"></span><div class="grow"><b>${esc(d.name)}</b> ` +
+    `<span class="muted">${esc(d.model)}</span><div class="muted">${d.online ? "Connected" : "Last seen " + ago(d.last_seen)}${d.status && d.status.battery != null ? " · battery " + d.status.battery + "%" + (d.status.charging ? " (charging)" : "") : ""}` +
+    ` · paired ${ago(d.paired)}</div></div><button class="danger" data-r="${esc(d.id)}">Remove</button></div>`).join("") : "None yet.";
+  $("#devs").querySelectorAll("button[data-r]").forEach((b) => b.onclick = () => { if (confirm("Remove this device? It will need to pair again.")) api("revoke", { id: b.dataset.r }).then(refresh); });
+  const a = S.app_share;
+  $("#appBtn").textContent = a.on ? "Stop sharing" : "Share the app"; $("#appBtn").disabled = !a.apk;
+  if (!a.apk) $("#appArea").innerHTML = `<div class="note">The app file is not installed on this PC.</div>`;
+  else if (a.on && a.url.length) { if (appKey !== a.url[0]) { appKey = a.url[0];
+    $("#appArea").innerHTML = `<div class="qr"><img src="/app-qr.svg?k=${Date.now()}" alt="Download link"><div><b>Scan with the phone's camera</b>` +
+      `<div class="muted">Then open the downloaded file and allow installing from this source.</div><div class="note"><code>${esc(a.url[0])}</code></div></div></div>`; } }
+  else { appKey = ""; $("#appArea").innerHTML = ""; }
+}
+setInterval(() => { const c = $("#countdown"); if (c && S && S.pairing.active) c.textContent = `Expires in ${Math.max(0, Math.round(S.pairing.expires - Date.now() / 1000))} s`; }, 500);
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=AIROX Connect
+GenericName=Phone link
+Comment=Use AIRA, the Task Manager, files and your screen from your Android phone or tablet
+Exec=airox-connect
+Icon=airox-connect
+Terminal=false
+Categories=Network;Utility;
+Keywords=phone;android;tablet;connect;pair;second screen;remote;files;
+StartupWMClass=airox-connect

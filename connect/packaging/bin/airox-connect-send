@@ -1,0 +1,29 @@
+#!/usr/bin/python3 -s
+"""airox-connect-send FILE...: send files from this PC to your paired phone (AIROX Connect).
+Asks you first (a notification), as everything that leaves the PC does."""
+import json, os, subprocess, sys, urllib.request
+from pathlib import Path
+
+def main() -> int:
+    paths = [str(Path(p).resolve()) for p in sys.argv[1:]]
+    if not paths:
+        print(__doc__.strip())
+        return 2
+    f = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state")) / "airox-connect" / "ui.token"
+    try:
+        port, token = f.read_text().split()
+        req = urllib.request.Request(f"http://127.0.0.1:{port}/api", headers={"Content-Type": "application/json", "X-Token": token},
+                                     data=json.dumps({"method": "send", "params": {"paths": paths}}).encode())
+        out = json.loads(urllib.request.urlopen(req, timeout=150).read())
+    except (OSError, ValueError) as exc:
+        out = {"ok": False, "error": f"AIROX Connect is not running ({exc})"}
+    if out.get("ok"):
+        msg = f"Sent {len(paths)} file{'s' if len(paths) != 1 else ''} to your phone."
+    else:
+        errs = [r.get("error") or r.get("decision") for r in out.get("results", []) if not r.get("ok")]
+        msg = "Not sent: " + (out.get("error") or "; ".join(e for e in errs if e) or "unknown error")
+    print(msg)
+    subprocess.run(["notify-send", "-a", "AIROX Connect", "-i", "airox-connect", "AIROX Connect", msg], check=False)
+    return 0 if out.get("ok") else 1
+
+sys.exit(main())

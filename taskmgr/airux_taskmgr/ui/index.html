@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Task Manager</title>
+<style>
+  :root { --bg:#0b1016; --rail:#0f151d; --panel:#131b25; --line:#223040; --text:#e6e9ee; --muted:#8b95a3;
+          --blue:#7cc4ff; --green:#59c38a; --amber:#f0b45a; --red:#ff7a7a; --sel:#1a2a3b; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--text); font:13px/1.4 Inter, "DejaVu Sans", system-ui, sans-serif; overflow:hidden; }
+  .app { display:grid; grid-template-columns: 210px 1fr; height:100%; }
+  nav { background:var(--rail); border-right:1px solid var(--line); padding:12px 8px; display:flex; flex-direction:column; gap:2px; }
+  nav .brand { display:flex; align-items:center; gap:10px; padding:6px 10px 16px; font-weight:600; font-size:14px; }
+  nav .brand img { width:24px; height:24px; }
+  nav button { all:unset; display:flex; align-items:center; gap:12px; padding:9px 12px; border-radius:8px; cursor:pointer; color:var(--text); }
+  nav button:hover { background:#16202b; } nav button.on { background:var(--sel); box-shadow: inset 3px 0 0 var(--blue); }
+  nav .ic { width:18px; text-align:center; opacity:.9; }
+  main { display:flex; flex-direction:column; min-width:0; min-height:0; }
+  .top { display:flex; align-items:center; gap:12px; padding:12px 18px; border-bottom:1px solid var(--line); }
+  .top h1 { font-size:16px; margin:0; font-weight:600; }
+  .top input { margin-left:auto; width:280px; background:#0f1720; color:var(--text); border:1px solid var(--line); border-radius:8px; padding:7px 12px; font:inherit; }
+  button.b { font:inherit; color:var(--text); background:#172230; border:1px solid var(--line); border-radius:8px; padding:6px 14px; cursor:pointer; white-space:nowrap; }
+  button.b:hover { border-color:var(--blue); } button.b:disabled { opacity:.45; cursor:default; border-color:var(--line); }
+  button.danger { background:#3a1b1b; border-color:#5a2a2a; } button.primary { background:linear-gradient(90deg,#2f6f9c,#2f8a5f); border-color:transparent; font-weight:600; }
+  .view { flex:1; overflow:auto; min-height:0; }
+  table { width:100%; border-collapse:collapse; table-layout:fixed; }
+  th { position:sticky; top:0; background:var(--bg); text-align:right; font-weight:500; color:var(--muted); padding:8px 10px; border-bottom:1px solid var(--line); cursor:pointer; user-select:none; z-index:1; }
+  th:first-child, td:first-child { text-align:left; } th .big { display:block; color:var(--text); font-size:15px; font-weight:600; }
+  td { padding:5px 10px; text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; border-bottom:1px solid #141c26; }
+  tr.sec td { color:var(--blue); font-weight:600; padding-top:14px; text-align:left; border:none; }
+  tr.row { cursor:default; } tr.row:hover td { background:#111a24; } tr.row.sel td { background:var(--sel); }
+  tr.child td:first-child { padding-left:46px; color:#c6ccd4; }
+  .nm { display:flex; align-items:center; gap:8px; } .nm img, .nm .ph { width:18px; height:18px; flex:none; }
+  .nm .ph { border-radius:4px; background:#24313f; display:inline-grid; place-items:center; font-size:10px; color:var(--muted); }
+  .tw { width:14px; color:var(--muted); cursor:pointer; flex:none; text-align:center; }
+  .muted { color:var(--muted); }
+  .perf { display:grid; grid-template-columns: 250px 1fr; height:100%; }
+  .tiles { border-right:1px solid var(--line); overflow:auto; padding:8px; }
+  .tile { display:flex; gap:10px; padding:8px; border-radius:8px; cursor:pointer; align-items:center; }
+  .tile:hover { background:#111a24; } .tile.on { background:var(--sel); }
+  .tile canvas { width:70px; height:42px; border:1px solid var(--line); border-radius:4px; flex:none; }
+  .tile b { display:block; } .tile span { color:var(--muted); font-size:12px; }
+  .detail { padding:18px 24px; overflow:auto; }
+  .detail h2 { margin:0; font-size:22px; font-weight:600; display:flex; justify-content:space-between; align-items:baseline; gap:12px; }
+  .detail h2 small { font-size:13px; color:var(--muted); font-weight:400; text-align:right; }
+  .graph { width:100%; height:300px; border:1px solid var(--line); border-radius:6px; margin:12px 0 6px; background:#0d141c; }
+  .cores { display:grid; grid-template-columns: repeat(auto-fill, minmax(120px,1fr)); gap:6px; margin:10px 0; }
+  .cores canvas { width:100%; height:52px; border:1px solid var(--line); border-radius:4px; background:#0d141c; }
+  .stats { display:grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap:14px 24px; margin-top:14px; }
+  .stats div span { display:block; color:var(--muted); font-size:12px; } .stats div b { font-size:17px; font-weight:500; }
+  .switch { position:relative; width:38px; height:20px; border-radius:10px; background:#2a3848; cursor:pointer; flex:none; border:none; }
+  .switch::after { content:""; position:absolute; left:3px; top:3px; width:14px; height:14px; border-radius:50%; background:#c9d1db; transition:.15s; }
+  .switch.on { background:#2f8a5f; } .switch.on::after { left:21px; background:#fff; }
+  .modal { position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; place-items:center; z-index:10; }
+  .modal.show { display:grid; }
+  .dlg { width:440px; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:20px 22px; box-shadow:0 20px 60px rgba(0,0,0,.5); }
+  .dlg h3 { margin:0 0 8px; font-size:16px; } .dlg p { margin:0 0 6px; } .dlg .risk { color:var(--amber); font-size:12px; margin-bottom:14px; }
+  .dlg .row { display:flex; gap:10px; justify-content:flex-end; margin-top:16px; }
+  #menu { position:fixed; display:none; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:4px; min-width:200px; z-index:5; box-shadow:0 10px 30px rgba(0,0,0,.5); }
+  #menu button { all:unset; display:block; width:100%; box-sizing:border-box; padding:7px 12px; border-radius:6px; cursor:pointer; }
+  #menu button:hover { background:var(--sel); } #menu hr { border:none; border-top:1px solid var(--line); margin:4px 0; }
+  #toast { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:10px 16px; display:none; z-index:20; max-width:70%; }
+  .tabs2 { display:flex; gap:6px; margin-left:12px; }
+  .pill { padding:2px 9px; border-radius:999px; font-size:12px; background:#1b2733; color:var(--muted); }
+  .pill.ok { background:#173326; color:var(--green); } .pill.bad { background:#3a1b1b; color:var(--red); }
+</style>
+</head>
+<body>
+<div class="app">
+  <nav>
+    <div class="brand"><img src="/logo.svg" alt="">Task Manager</div>
+    <button data-v="processes" class="on"><span class="ic">▦</span>Processes</button>
+    <button data-v="performance"><span class="ic">📈</span>Performance</button>
+    <button data-v="startup"><span class="ic">🚀</span>Startup apps</button>
+    <button data-v="users"><span class="ic">👥</span>Users</button>
+    <button data-v="details"><span class="ic">☰</span>Details</button>
+    <button data-v="services"><span class="ic">⚙</span>Services</button>
+  </nav>
+  <main>
+    <div class="top"><h1 id="title">Processes</h1><span id="extra"></span>
+      <input id="q" placeholder="Type a name or process id to search" autocomplete="off">
+      <button class="b" id="endBtn" disabled>End task</button></div>
+    <div class="view" id="view"></div>
+  </main>
+</div>
+<div id="menu"></div>
+<div class="modal" id="modal"><div class="dlg"><h3 id="mT">Are you sure?</h3><p id="mB"></p><div class="risk" id="mR"></div>
+  <div class="row"><button class="b" id="mNo">Cancel</button><button class="b danger" id="mYes">Yes</button></div></div></div>
+<div id="toast"></div>
+<script>
+"use strict";
+const TOKEN = "__TOKEN__";
+const $ = (s) => document.querySelector(s);
+const esc = (x) => String(x ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const api = (method, params = {}) => fetch("/api", { method: "POST", headers: { "Content-Type": "application/json", "X-Token": TOKEN },
+  body: JSON.stringify({ method, params }) }).then((r) => r.json());
+const fmtB = (b) => { if (b == null) return "—"; const u = ["B","KB","MB","GB","TB"]; let i = 0; while (b >= 1024 && i < 4) { b /= 1024; i++; }
+  return (i ? b.toFixed(b < 10 ? 1 : 0) : b.toFixed(0)) + " " + u[i]; };
+const fmtRate = (b) => b ? fmtB(b) + "/s" : "0 MB/s";
+const heat = (v, max) => { const a = Math.min(1, (v || 0) / max); return a < 0.02 ? "" : `background:rgba(240,180,90,${0.08 + a * 0.4})`; };
+const RISK = { stop: "Ends a running program or service", root: "Needs an administrator", write: "Changes a setting", overwrite: "Rewrites one of your files" };
+
+let view = "processes", data = null, perf = null, sel = null, sort = { k: "cpu", d: -1 }, open = new Set(), perfSel = "cpu";
+let services = null, startup = null, usersD = null, svcScope = "system";
+
+document.querySelectorAll("nav button").forEach((b) => b.onclick = () => {
+  document.querySelectorAll("nav button").forEach((x) => x.classList.toggle("on", x === b));
+  view = b.dataset.v; sel = null; $("#title").textContent = b.textContent.trim(); render(); load(true); });
+$("#q").oninput = () => render();
+document.addEventListener("click", () => $("#menu").style.display = "none");
+
+function toast(t) { const e = $("#toast"); e.textContent = t; e.style.display = "block"; clearTimeout(toast.t); toast.t = setTimeout(() => e.style.display = "none", 5000); }
+
+// ---------------------------------------------------------------- confirmations from the broker
+const es = new EventSource("/events?token=" + encodeURIComponent(TOKEN));
+let pendingId = null;
+es.onmessage = (m) => {
+  const ev = JSON.parse(m.data);
+  if (ev.event === "confirm") {
+    pendingId = ev.id; $("#mT").textContent = "Are you sure?"; $("#mB").textContent = ev.summary;
+    $("#mR").textContent = (ev.risks || []).map((r) => RISK[r] || r).join(" · ");
+    $("#mYes").textContent = ev.tool === "startup_app" ? "Change it" : (ev.tool === "service" ? "Yes" : (ev.args && ev.args.force ? "Kill" : "End task"));
+    $("#modal").classList.add("show");
+  } else if (ev.event === "confirm_done" && ev.id === pendingId) {
+    $("#modal").classList.remove("show"); pendingId = null;
+  } else if (ev.event === "result") {
+    if (!ev.allowed) toast(ev.decision.startsWith("denied") ? "Cancelled." : ev.error);
+    else if (!ev.ok) toast("That did not work: " + ev.error);
+    else if (ev.data && ev.data.detail) toast(ev.data.detail);
+    load(true);
+  }
+};
+$("#mYes").onclick = () => { api("confirm", { id: pendingId, yes: true }); $("#modal").classList.remove("show"); };
+$("#mNo").onclick = () => { api("confirm", { id: pendingId, yes: false }); $("#modal").classList.remove("show"); };
+const run = (tool, args) => api("run", { tool, args });
+
+// ---------------------------------------------------------------- data
+async function load(now) {
+  try {
+    if (view === "processes" || view === "details") data = await api("processes");
+    if (view === "performance") perf = await api("performance");
+    if (view === "services" && (now || !services)) services = await api("services");
+    if (view === "startup" && (now || !startup)) startup = await api("startup");
+    if (view === "users") usersD = await api("users");
+    render();
+  } catch (e) { /* the server restarted */ }
+}
+setInterval(() => { if (!(view === "services" || view === "startup")) load(); }, 1000);
+load(true);
+
+function matches(g) { const q = $("#q").value.trim().toLowerCase(); if (!q) return true;
+  return g.name.toLowerCase().includes(q) || g.procs.some((p) => String(p.pid) === q || p.name.toLowerCase().includes(q)); }
+function iconHtml(name, label) { return name ? `<img src="/icon?name=${encodeURIComponent(name)}" onerror="this.outerHTML='<span class=ph>${esc((label||'?')[0])}</span>'">`
+  : `<span class="ph">${esc((label || "?")[0].toUpperCase())}</span>`; }
+
+function render() {
+  const v = $("#view"); $("#extra").innerHTML = "";
+  $("#endBtn").style.display = (view === "processes" || view === "details") ? "" : "none";
+  if (view === "processes") return renderProcs(v);
+  if (view === "details") return renderDetails(v);
+  if (view === "performance") return renderPerf(v);
+  if (view === "startup") return renderStartup(v);
+  if (view === "users") return renderUsers(v);
+  if (view === "services") return renderServices(v);
+}
+
+function sorter(a, b) { const k = sort.k; const x = a[k] ?? -1, y = b[k] ?? -1;
+  return (typeof x === "string" ? x.localeCompare(y) : x - y) * sort.d; }
+function head(cols) { return "<tr>" + cols.map(([k, label, big]) => `<th data-k="${k}">${big != null ? `<span class="big">${big}</span>` : ""}${label}${sort.k === k ? (sort.d < 0 ? " ▾" : " ▴") : ""}</th>`).join("") + "</tr>"; }
+function bindSort(v) { v.querySelectorAll("th").forEach((th) => th.onclick = () => { const k = th.dataset.k;
+  sort = { k, d: sort.k === k ? -sort.d : (k === "name" ? 1 : -1) }; render(); }); }
+
+function renderProcs(v) {
+  if (!data) { v.innerHTML = '<p class="muted" style="padding:20px">Reading processes…</p>'; return; }
+  const p = perf_totals();
+  const cols = [["name", "Name"], ["cpu", "CPU", p.cpu], ["memory", "Memory", p.mem], ["read_bps", "Disk", p.disk], ["gpu", "GPU", p.gpu]];
+  const secs = [["app", "Apps"], ["background", "Background processes"], ["system", "System processes"]];
+  let h = `<table><colgroup><col style="width:44%"><col><col><col><col></colgroup>${head(cols)}`;
+  for (const [kind, label] of secs) {
+    const gs = data.groups.filter((g) => g.kind === kind && matches(g)).map((g) => ({ ...g, read_bps: g.read_bps + g.write_bps })).sort(sorter);
+    if (!gs.length) continue;
+    h += `<tr class="sec"><td colspan="5">${label} (${gs.length})</td></tr>`;
+    for (const g of gs) {
+      const multi = g.count > 1, isOpen = open.has(g.key);
+      h += `<tr class="row${sel && sel.key === g.key && !sel.pid ? " sel" : ""}" data-key="${esc(g.key)}"><td><div class="nm">` +
+        `<span class="tw" data-tw="${esc(g.key)}">${multi ? (isOpen ? "▾" : "▸") : ""}</span>${iconHtml(g.icon, g.name)}<span>${esc(g.name)}${multi ? ` <span class="muted">(${g.count})</span>` : ""}</span></div></td>` +
+        `<td style="${heat(g.cpu, 50)}">${g.cpu.toFixed(1)}%</td><td style="${heat(g.memory, 2e9)}">${fmtB(g.memory)}</td>` +
+        `<td style="${heat(g.read_bps, 50e6)}">${fmtRate(g.read_bps)}</td><td>${g.gpu == null ? "—" : g.gpu.toFixed(0) + "%"}</td></tr>`;
+      if (multi && isOpen) for (const c of g.procs) h += `<tr class="row child${sel && sel.pid === c.pid ? " sel" : ""}" data-key="${esc(g.key)}" data-pid="${c.pid}">` +
+        `<td>${esc(c.name)} <span class="muted">${c.pid}</span></td><td>${c.cpu.toFixed(1)}%</td><td>${fmtB(c.memory)}</td><td>${fmtRate(c.read_bps + c.write_bps)}</td><td>${c.gpu == null ? "—" : c.gpu.toFixed(0) + "%"}</td></tr>`;
+    }
+  }
+  v.innerHTML = h + "</table>"; bindSort(v); bindRows(v);
+}
+
+function renderDetails(v) {
+  if (!data) return;
+  const all = data.groups.flatMap((g) => g.procs.map((p) => ({ ...p, key: g.key, app: g.name }))).filter((p) => matches({ name: p.name, procs: [p] }));
+  all.sort(sorter);
+  let h = `<table><colgroup><col style="width:26%"><col style="width:8%"><col style="width:10%"><col style="width:10%"><col><col><col style="width:8%"></colgroup>` +
+    head([["name", "Name"], ["pid", "PID"], ["state", "Status"], ["user", "User name"], ["cpu", "CPU"], ["memory", "Memory"], ["nice", "Priority"]]);
+  for (const p of all) h += `<tr class="row${sel && sel.pid === p.pid ? " sel" : ""}" data-key="${esc(p.key)}" data-pid="${p.pid}" title="${esc(p.cmdline)}">` +
+    `<td>${esc(p.name)}</td><td>${p.pid}</td><td>${({R:"Running",S:"Sleeping",D:"Waiting (disk)",T:"Paused",t:"Traced",Z:"Zombie",I:"Idle"})[p.state] || p.state}</td>` +
+    `<td>${esc(p.user)}</td><td>${p.cpu.toFixed(1)}%</td><td>${fmtB(p.memory)}</td><td>${p.nice}</td></tr>`;
+  v.innerHTML = h + "</table>"; bindSort(v); bindRows(v);
+}
+
+function selected() {
+  if (!sel || !data) return null;
+  const g = data.groups.find((x) => x.key === sel.key); if (!g) return null;
+  if (sel.pid) { const p = g.procs.find((x) => x.pid === sel.pid); return p ? { g, p } : null; }
+  return { g, p: g.count === 1 ? g.procs[0] : null };
+}
+function bindRows(v) {
+  v.querySelectorAll("[data-tw]").forEach((t) => t.onclick = (e) => { e.stopPropagation(); const k = t.dataset.tw; open.has(k) ? open.delete(k) : open.add(k); render(); });
+  v.querySelectorAll("tr.row").forEach((r) => {
+    r.onclick = () => { sel = { key: r.dataset.key, pid: r.dataset.pid ? +r.dataset.pid : null }; render(); };
+    r.oncontextmenu = (e) => { e.preventDefault(); r.onclick(); menu(e.clientX, e.clientY); };
+  });
+  const s = selected(); $("#endBtn").disabled = !s;
+}
+$("#endBtn").onclick = () => endSel(false);
+function endSel(force) { const s = selected(); if (!s) return;
+  if (s.p && (sel.pid || s.g.count === 1)) run("end_task", { pid: s.p.pid, start: s.p.start, force });
+  else run("end_app", { key: s.g.key, force }); }
+function menu(x, y) {
+  const s = selected(); if (!s) return; const m = $("#menu");
+  const p = s.p; let h = `<button data-a="end">End task</button><button data-a="kill">Kill (no saving)</button>`;
+  if (p) h += `<hr><button data-a="lower">Lower priority</button><button data-a="normal">Normal priority</button><button data-a="higher">Higher priority (administrator)</button><hr><button data-a="loc">Open file location</button>`;
+  m.innerHTML = h; m.style.left = Math.min(x, innerWidth - 220) + "px"; m.style.top = Math.min(y, innerHeight - 260) + "px"; m.style.display = "block";
+  m.querySelectorAll("button").forEach((b) => b.onclick = () => { const a = b.dataset.a;
+    if (a === "end") endSel(false); else if (a === "kill") endSel(true);
+    else if (a === "loc") run("open_location", { pid: p.pid, start: p.start });
+    else run("set_priority", { pid: p.pid, start: p.start, nice: { lower: 10, normal: 0, higher: -5 }[a] }); });
+}
+
+// ---------------------------------------------------------------- performance
+function perf_totals() { const P = lastPerf || {}; const m = P.memory || {}; const g = (P.gpus || [])[0];
+  const disk = Math.max(0, ...(P.disks || []).map((d) => d.active));
+  return { cpu: P.cpu ? Math.round(P.cpu.util) + "%" : "", mem: m.total ? Math.round(100 * m.used / m.total) + "%" : "",
+           disk: P.disks ? Math.round(disk) + "%" : "", gpu: g && g.util != null ? Math.round(g.util) + "%" : "" }; }
+let lastPerf = null;
+setInterval(async () => { if (view !== "performance") { try { lastPerf = await api("performance"); } catch (e) {} } }, 2000);
+
+function spark(c, hist, color, max = 100) {
+  const r = devicePixelRatio || 1, w = c.clientWidth * r, h = c.clientHeight * r; c.width = w; c.height = h;
+  const x = c.getContext("2d"); x.clearRect(0, 0, w, h);
+  x.strokeStyle = "rgba(124,196,255,.08)"; x.lineWidth = 1;
+  for (let i = 1; i < 6; i++) { x.beginPath(); x.moveTo(0, h * i / 6); x.lineTo(w, h * i / 6); x.stroke(); }
+  if (!hist || !hist.length) return;
+  const n = 60, step = w / (n - 1), pts = hist.slice(-n), off = n - pts.length;
+  x.beginPath(); pts.forEach((v, i) => { const px = (i + off) * step, py = h - Math.min(1, v / max) * h; i ? x.lineTo(px, py) : x.moveTo(px, py); });
+  x.strokeStyle = color; x.lineWidth = 1.5 * r; x.stroke();
+  x.lineTo(w, h); x.lineTo(off * step, h); x.closePath(); x.fillStyle = color.replace(")", ",.18)").replace("rgb", "rgba"); x.fill();
+}
+function tilesOf(P) {
+  const t = [{ id: "cpu", name: "CPU", sub: `${Math.round(P.cpu.util)}%  ${P.cpu.mhz ? (P.cpu.mhz / 1000).toFixed(2) + " GHz" : ""}`, hist: P.cpu.history, color: "rgb(124,196,255)" },
+    { id: "mem", name: "Memory", sub: `${fmtB(P.memory.used)} / ${fmtB(P.memory.total)} (${Math.round(100 * P.memory.used / P.memory.total)}%)`, hist: P.memory.history, color: "rgb(190,140,255)" }];
+  P.disks.forEach((d, i) => t.push({ id: "disk:" + d.name, name: `Disk ${i} (${d.name})`, sub: `${d.ssd ? "SSD" : "HDD"}  ${Math.round(d.active)}%`, hist: d.history, color: "rgb(89,195,138)", d }));
+  P.network.forEach((n) => t.push({ id: "net:" + n.name, name: `${n.kind} (${n.name})`, sub: `S: ${fmtRate(n.tx_bps)} R: ${fmtRate(n.rx_bps)}`, hist: n.history, color: "rgb(240,180,90)", n, max: Math.max(100, ...n.history) }));
+  P.gpus.forEach((g, i) => t.push({ id: "gpu:" + g.id, name: `GPU ${i}`, sub: `${g.name}  ${g.util == null ? "" : Math.round(g.util) + "%"}`, hist: g.history, color: "rgb(255,122,122)", g }));
+  return t;
+}
+function renderPerf(v) {
+  if (!perf || !perf.cpu) { v.innerHTML = '<p class="muted" style="padding:20px">Measuring…</p>'; return; }
+  lastPerf = perf; const T = tilesOf(perf); const cur = T.find((t) => t.id === perfSel) || T[0]; perfSel = cur.id;
+  if (!v.querySelector(".perf") || v.dataset.ids !== T.map((t) => t.id).join() || v.dataset.sel !== perfSel) {
+    v.dataset.ids = T.map((t) => t.id).join(); v.dataset.sel = perfSel;
+    v.innerHTML = `<div class="perf"><div class="tiles">${T.map((t) => `<div class="tile${t.id === perfSel ? " on" : ""}" data-id="${esc(t.id)}"><canvas></canvas><div><b>${esc(t.name)}</b><span class="sub"></span></div></div>`).join("")}</div><div class="detail" id="det"></div></div>`;
+    v.querySelectorAll(".tile").forEach((e) => e.onclick = () => { perfSel = e.dataset.id; renderPerf(v); });
+  }
+  v.querySelectorAll(".tile").forEach((e, i) => { const t = T[i]; e.querySelector(".sub").textContent = t.sub; spark(e.querySelector("canvas"), t.hist, t.color, t.max || 100); });
+  const d = $("#det"); const P = perf;
+  let h = "", stats = [];
+  if (cur.id === "cpu") {
+    h = `<h2>CPU <small>${esc(P.cpu.model)}</small></h2><div class="muted">% utilisation over 60 seconds</div><canvas class="graph"></canvas><div class="cores">${P.cpu.cores.map(() => "<canvas></canvas>").join("")}</div>`;
+    const up = P.cpu.uptime || 0;
+    stats = [["Utilisation", Math.round(P.cpu.util) + "%"], ["Speed", P.cpu.mhz ? (P.cpu.mhz / 1000).toFixed(2) + " GHz" : "—"], ["Processes", P.cpu.procs ?? "—"],
+      ["Load (1, 5, 15 min)", P.cpu.load.map((x) => x.toFixed(2)).join("  ")], ["Logical processors", P.cpu.count],
+      ["Up time", `${Math.floor(up / 86400)}:${String(Math.floor(up % 86400 / 3600)).padStart(2, "0")}:${String(Math.floor(up % 3600 / 60)).padStart(2, "0")}:${String(Math.floor(up % 60)).padStart(2, "0")}`]];
+  } else if (cur.id === "mem") {
+    h = `<h2>Memory <small>${fmtB(P.memory.total)}</small></h2><div class="muted">Memory in use</div><canvas class="graph"></canvas>`;
+    stats = [["In use", fmtB(P.memory.used)], ["Available", fmtB(P.memory.available)], ["Cached", fmtB(P.memory.cached)], ["Swap", `${fmtB(P.memory.swap_used)} / ${fmtB(P.memory.swap_total)}`]];
+  } else if (cur.d) {
+    h = `<h2>${esc(cur.name)} <small>${esc(cur.d.model)}</small></h2><div class="muted">Active time</div><canvas class="graph"></canvas>`;
+    stats = [["Active time", Math.round(cur.d.active) + "%"], ["Read speed", fmtRate(cur.d.read_bps)], ["Write speed", fmtRate(cur.d.write_bps)], ["Capacity", fmtB(cur.d.size)], ["Type", cur.d.ssd ? "SSD" : "HDD"]];
+  } else if (cur.n) {
+    h = `<h2>${esc(cur.n.kind)} <small>${esc(cur.n.name)}</small></h2><div class="muted">Throughput (kbps)</div><canvas class="graph"></canvas>`;
+    stats = [["Send", fmtRate(cur.n.tx_bps)], ["Receive", fmtRate(cur.n.rx_bps)], ["State", cur.n.up ? "Connected" : "Not connected"]];
+  } else if (cur.g) {
+    h = `<h2>${esc(cur.name)} <small>${esc(cur.g.name)}</small></h2><div class="muted">Utilisation</div><canvas class="graph"></canvas>`;
+    stats = [["Utilisation", cur.g.util == null ? "not reported" : Math.round(cur.g.util) + "%"], ["Dedicated memory", cur.g.mem_total ? `${fmtB(cur.g.mem_used)} / ${fmtB(cur.g.mem_total)}` : "—"],
+      ["Temperature", cur.g.temp == null ? "—" : cur.g.temp + " °C"], ["Power", cur.g.power == null ? "—" : cur.g.power + " W"]];
+  }
+  if (d.dataset.sel !== perfSel) { d.dataset.sel = perfSel; d.innerHTML = h + '<div class="stats"></div>'; }
+  d.querySelector(".stats").innerHTML = stats.map(([k, x]) => `<div><span>${esc(k)}</span><b>${esc(x)}</b></div>`).join("");
+  spark(d.querySelector(".graph"), cur.hist, cur.color, cur.max || 100);
+  if (cur.id === "cpu") d.querySelectorAll(".cores canvas").forEach((c, i) => { coreHist[i] = (coreHist[i] || []).concat([P.cpu.cores[i]]).slice(-60); spark(c, coreHist[i], cur.color); });
+}
+const coreHist = [];
+
+// ---------------------------------------------------------------- startup, users, services
+function renderStartup(v) {
+  if (!startup) return; const q = $("#q").value.toLowerCase();
+  const apps = startup.apps.filter((a) => !q || a.name.toLowerCase().includes(q));
+  let h = `<table><colgroup><col style="width:38%"><col><col style="width:110px"><col style="width:90px"></colgroup><tr><th>Name</th><th style="text-align:left">Command</th><th>Status</th><th></th></tr>`;
+  for (const a of apps) h += `<tr class="row"><td><div class="nm">${iconHtml(a.icon, a.name)}<span>${esc(a.name)}</span></div></td><td style="text-align:left" class="muted">${esc(a.command)}</td>` +
+    `<td>${a.enabled ? "Enabled" : "Disabled"}</td><td><button class="switch${a.enabled ? " on" : ""}" data-id="${esc(a.id)}" data-on="${a.enabled}"></button></td></tr>`;
+  v.innerHTML = h + "</table>";
+  v.querySelectorAll(".switch").forEach((s) => s.onclick = () => run("startup_app", { entry: s.dataset.id, enabled: s.dataset.on !== "true" }));
+}
+function renderUsers(v) {
+  if (!usersD) return;
+  let h = `<table><tr><th>User</th><th>Session</th><th>State</th><th>CPU</th><th>Memory</th><th>Processes</th></tr>`;
+  const seen = new Set();
+  for (const s of usersD.sessions) { const u = usersD.usage[s.user] || {}; seen.add(s.user);
+    h += `<tr class="row"><td><div class="nm"><span class="ph">${esc((s.user || "?")[0].toUpperCase())}</span>${esc(s.user)}</div></td><td>${esc(s.session)} ${esc(s.seat || s.tty)}</td><td>${esc(s.state)}</td><td>${(u.cpu || 0).toFixed(1)}%</td><td>${fmtB(u.memory)}</td><td>${u.count || 0}</td></tr>`; }
+  v.innerHTML = h + "</table>";
+}
+function renderServices(v) {
+  $("#extra").innerHTML = `<span class="tabs2"><button class="b${svcScope === "system" ? " primary" : ""}" data-s="system">System</button><button class="b${svcScope === "user" ? " primary" : ""}" data-s="user">Mine</button></span>`;
+  $("#extra").querySelectorAll("button").forEach((b) => b.onclick = () => { svcScope = b.dataset.s; render(); });
+  if (!services) return; const q = $("#q").value.toLowerCase();
+  const rows = services[svcScope].filter((s) => !q || s.unit.toLowerCase().includes(q) || s.description.toLowerCase().includes(q));
+  let h = `<table><colgroup><col style="width:30%"><col><col style="width:110px"><col style="width:230px"></colgroup><tr><th>Name</th><th style="text-align:left">Description</th><th>Status</th><th></th></tr>`;
+  for (const s of rows) { const on = s.active === "active";
+    h += `<tr class="row"><td>${esc(s.unit)}</td><td style="text-align:left" class="muted">${esc(s.description)}</td><td><span class="pill ${on ? "ok" : s.active === "failed" ? "bad" : ""}">${on ? "Running" : s.active === "failed" ? "Failed" : "Stopped"}</span></td>` +
+      `<td>${on ? `<button class="b" data-u="${esc(s.unit)}" data-a="restart">Restart</button> <button class="b" data-u="${esc(s.unit)}" data-a="stop">Stop</button>` : `<button class="b" data-u="${esc(s.unit)}" data-a="start">Start</button>`}</td></tr>`; }
+  v.innerHTML = h + "</table>";
+  v.querySelectorAll("button[data-u]").forEach((b) => b.onclick = () => run("service", { name: b.dataset.u, action: b.dataset.a, scope: svcScope }));
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+#!/bin/sh
+# AIROX Connect: the window (pairing, devices, sharing the app). Starts airox-connectd if needed.
+f="${XDG_STATE_HOME:-$HOME/.local/state}/airox-connect/ui.token"
+alive() { [ -r "$f" ] && read -r port token < "$f" && curl -fs -o /dev/null -m 2 "http://127.0.0.1:$port/logo.svg"; }
+if ! alive; then
+    rm -f "$f"
+    setsid /usr/bin/airox-connectd >/dev/null 2>&1 &
+    i=0
+    until alive; do
+        i=$((i + 1)); [ "$i" -gt 80 ] && { notify-send -a "AIROX Connect" "AIROX Connect did not start."; exit 1; }
+        sleep 0.25
+    done
+fi
+read -r port token < "$f"
+exec chromium --app="http://127.0.0.1:$port/" --class=airox-connect --window-size=900,820 \
+    --no-first-run --noerrdialogs --password-store=basic \
+    --user-data-dir="${XDG_DATA_HOME:-$HOME/.local/share}/airox-connect/ui-profile"

@@ -3,3 +3,6 @@ _launch=Meta+I
 
 [services][aira-ptt.desktop]
 _launch=Ctrl+Space
+
+[services][airux-taskmgr.desktop]
+_launch=Ctrl+Shift+Esc

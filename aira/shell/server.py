@@ -6,6 +6,7 @@ POST /command        {"text": ...}            run a typed command
 POST /confirm        {"id": ..., "yes": bool}  answer a pending confirmation
 POST /ptt/start      start push-to-talk recording;  POST /ptt/stop  stop and run it
 POST /ptt/toggle     start or stop (the global Ctrl+Space shortcut runs aira-ptt)
+POST /voice_file     {"path", "quiet"}  a recording from a paired phone (AIROX Connect's runtime folder only)
 
 Security: only 127.0.0.1; every POST needs the per-session token (X-AIRA-Token header), and the
 Host header must be exactly 127.0.0.1:<port>. A web page open in the AIRA browser therefore cannot
@@ -47,6 +48,12 @@ def tags_for(reply: str) -> list[str]:
     if "Sources:" in reply:
         tags.append("cited")
     return tags
+
+
+def voice_dir() -> Path | None:
+    """AIROX Connect's private runtime folder, where it puts phone recordings for /voice_file."""
+    base = os.environ.get("XDG_RUNTIME_DIR")
+    return Path(os.path.realpath(Path(base) / "airox-connect")) if base else None
 
 
 READY_WAIT = 120.0   # seconds a command waits for AIRA to finish loading
@@ -138,10 +145,10 @@ class Shell:
                       "calls": [{"agent": r.agent, "tool": s.tool, "args": s.args, "verified": s.verified}
                                 for r in turn.runs for s in r.tool_calls]})
 
-    def run_text(self, text: str) -> None:
+    def run_text(self, text: str, via: str = "typed") -> None:
         def work():
             with self.busy:
-                self.publish({"event": "you", "text": text, "via": "typed"})
+                self.publish({"event": "you", "text": text, "via": via})
                 self.publish({"event": "thinking"})
                 if not self._wait_ready():
                     self.publish({"event": "aira", "text": STARTING, "tags": []})
@@ -166,8 +173,9 @@ class Shell:
         self.run_audio(self.recorder.stop())
         return {"ok": True, "state": "thinking"}
 
-    def run_audio(self, wav: Path) -> threading.Thread:
-        """What happens after push-to-talk stops: transcribe, run, show and speak the reply."""
+    def run_audio(self, wav: Path, quiet: bool = False, via: str = "voice") -> threading.Thread:
+        """What happens after push-to-talk stops: transcribe, run, show and speak the reply.
+        quiet: synthesise the reply but do not play it on the PC (a phone plays it instead)."""
         def work():
             with self.busy:
                 self.publish({"event": "thinking"})
@@ -175,8 +183,14 @@ class Shell:
                     self.publish({"event": "aira", "text": STARTING, "tags": []})
                     self.publish({"event": "idle"})
                     return
-                vt = self.voice.handle_audio(wav)
-                self.publish({"event": "you", "text": vt.transcript or "(nothing heard)", "via": "voice"})
+                speaker = self.voice.speaker
+                was = speaker.play
+                speaker.play = was and not quiet
+                try:
+                    vt = self.voice.handle_audio(wav)
+                finally:
+                    speaker.play = was
+                self.publish({"event": "you", "text": vt.transcript or "(nothing heard)", "via": via})
                 if vt.turn is not None:
                     self._finish(vt.turn)
                 else:
@@ -257,7 +271,22 @@ class Shell:
                         return self._send(400, b'{"error":"empty"}')
                     if shell.busy.locked():
                         return self._send(409, b'{"error":"busy"}')
-                    shell.run_text(text)
+                    via = body.get("via") if body.get("via") in ("typed", "phone", "neox") else "typed"
+                    shell.run_text(text, via)
+                    return self._send(202, b'{"ok":true}')
+                if self.path == "/voice_file":
+                    # a spoken command recorded on a paired phone (AIROX Connect); only files in its private
+                    # runtime folder are accepted
+                    allowed = voice_dir()
+                    try:
+                        wav = Path(os.path.realpath(str(body.get("path", ""))))
+                    except (TypeError, ValueError):
+                        return self._send(400, b'{"error":"bad path"}')
+                    if allowed is None or wav.parent != allowed or not wav.name.endswith(".wav") or not wav.is_file():
+                        return self._send(400, b'{"error":"not an AIROX Connect recording"}')
+                    if shell.busy.locked():
+                        return self._send(409, b'{"error":"busy"}')
+                    shell.run_audio(wav, quiet=bool(body.get("quiet")), via="phone (voice)")
                     return self._send(202, b'{"ok":true}')
                 if self.path == "/settings":
                     if shell.orch is None:

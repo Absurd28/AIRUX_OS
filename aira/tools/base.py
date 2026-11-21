@@ -15,8 +15,9 @@ from typing import Any, Callable
 
 MAX_TOOLS_PER_AGENT = 8
 # Tuned after phase 6: the Desktop agent gets a 9th tool, the browser; after phase 9 the System agent
-# gets a 9th, `security` (Phagos, the antivirus), and a 10th, `hardware` (AIRUX Drivers).
-TOOL_CAP = {"desktop": 9, "system": 10}
+# gets a 9th, `security` (Phagos, the antivirus), and a 10th, `hardware` (AIRUX Drivers); the Assistant
+# agent gets a 9th, `phone` (AIROX Connect).
+TOOL_CAP = {"desktop": 9, "system": 10, "assistant": 9}
 
 
 def tool_cap(agent: str) -> int:
@@ -34,12 +35,14 @@ class Risk(str, enum.Enum):
     SEND_OFF = "send_off_machine"    # any data leaves the machine (includes search queries)
     ROOT = "root"
     EXEC = "exec"                    # arbitrary command chosen by the model
+    STOP = "stop"                    # ends a running program or service (its unsaved work is lost)
 
 
 # docs/ARCHITECTURE.md: delete, overwrite, install, network changes, sending anything off the machine,
 # and anything needing root require confirmation. Arbitrary commands too: they can do any of these.
+# Ending a program or stopping a service (Task Manager, AIROX Connect) too: unsaved work is lost.
 CONFIRM = frozenset({Risk.DELETE, Risk.OVERWRITE, Risk.INSTALL, Risk.NETWORK_CHANGE,
-                     Risk.SEND_OFF, Risk.ROOT, Risk.EXEC})
+                     Risk.SEND_OFF, Risk.ROOT, Risk.EXEC, Risk.STOP})
 
 
 @dataclass
@@ -96,13 +99,18 @@ class Tool:
 @dataclass
 class Registry:
     tools: dict[str, Tool] = field(default_factory=dict)
+    # AIRA's own registry has her five agents. The Task Manager and AIROX Connect build their own
+    # registries (callers "taskmgr", "connect") so their actions pass the same broker without
+    # becoming tools the model can route to.
+    agents: tuple[str, ...] = AGENTS
 
     def add(self, tool: Tool) -> Tool:
         if tool.name in self.tools:
             raise ValueError(f"duplicate tool {tool.name}")
-        if tool.agent not in AGENTS:
+        if tool.agent not in self.agents:
             raise ValueError(f"unknown agent {tool.agent}")
-        if len(self.for_agent(tool.agent)) >= tool_cap(tool.agent):
+        # the cap keeps a model agent's prompt small; registries no model routes to are not capped
+        if tool.agent in AGENTS and len(self.for_agent(tool.agent)) >= tool_cap(tool.agent):
             raise ValueError(f"agent {tool.agent} already has {tool_cap(tool.agent)} tools")
         self.tools[tool.name] = tool
         return tool

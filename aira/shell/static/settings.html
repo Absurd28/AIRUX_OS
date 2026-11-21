@@ -74,6 +74,7 @@
     <button data-s="you">🙂 How AIRA talks to you</button>
     <button data-s="memory">🔐 Memory and privacy</button>
     <button data-s="model">🧠 Model</button>
+    <button data-s="phone">📱 Phone</button>
     <button data-s="activity">📋 Activity</button>
   </nav>
   <main>
@@ -107,6 +108,12 @@
       <div class="card"><div class="t"><b>Local model server</b><span id="model-server">…</span></div></div>
       <div class="card"><div class="t"><b>Size picked for this computer</b><span id="model-tier">…</span></div></div>
       <div class="card"><div class="t"><b>Bigger model</b><span>If your hardware allows one, run <code>aira-models</code> in a terminal. It shows the download size and asks before downloading.</span></div></div>
+    </section>
+
+    <section id="phone">
+      <h1>Phone</h1>
+      <p class="muted">Phones and tablets paired with AIROX Connect can talk to AIRA from the same network. Pair or remove one in the AIROX Connect app (Start menu).</p>
+      <div id="phones"><div class="card"><div class="t"><b>No phone paired</b><span>Open AIROX Connect, turn on "Allow phone connections" and show the pairing code.</span></div></div></div>
     </section>
 
     <section id="activity">
@@ -144,6 +151,8 @@ async function load() {
   vc.disabled = s.voice.piper_fallback;
   if (s.voice.piper_fallback) $("voice-note").textContent = "This computer has under 6 GB of memory, so AIRA uses the lighter Piper voice.";
   $("names").value = s.names.join(", ");
+  if (s.phones && s.phones.length) $("phones").innerHTML = s.phones.map(p => `<div class="card"><div class="t"><b>${esc(p.name)}</b>` +
+      `<span>${p.online ? "Connected" : "Not connected"}${p.battery != null ? " · battery " + p.battery + "%" : ""}</span></div></div>`).join("");
   $("mem-on").checked = !s.memory.paused;
   $("mem-used").textContent = `${s.memory.used_mb} MB of ${s.memory.quota_mb} MB · ` +
       Object.entries(s.memory.items).map(([k, n]) => `${n} ${k}`).join(", ");

@@ -1,0 +1,5 @@
+#!/bin/sh
+# AIROX Connect's service, in the desktop session (autostarted). Runs in AIRA's runtime so phone actions
+# pass AIRA's permission broker. Phones can reach it only after "Allow phone connections" is turned on.
+export PYTHONPATH=/usr/lib/airox-connect:/usr/lib/airux-taskmgr${PYTHONPATH:+:$PYTHONPATH}
+exec /usr/lib/aira/run airox_connect.server "$@"

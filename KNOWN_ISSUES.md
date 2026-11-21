@@ -215,3 +215,40 @@ The phase each issue was found in is in brackets.
   plainly. [6]
 - On the development machine (WSL) there is no clipboard tool, no Podman and no desktop. Those
   tools fail there by design, and the evaluation counts how AIRA reports the failures. [2, 9]
+
+## Task Manager and AIROX Connect
+
+- **Same network only.** AIROX Connect 0.1 refuses connections from anything but private,
+  link-local and loopback addresses. Reaching the PC from other networks (planned: a Tor onion
+  service, no account or port forwarding) is not built yet.
+- **Android 10 or newer.** The PC accepts only TLS 1.3, which Android has from version 10. There is
+  no iOS app yet.
+- **The app is a debug build** (signed with the debug key, about 60 MB), installed from the PC or by
+  copying the APK; it is not in an app store. "Share the app" serves the APK over plain HTTP on the
+  local network for 10 minutes: someone on the same network could swap the file. Copying it over
+  USB avoids that.
+- **The second screen is 1920x1080.** KDE's "New Virtual Output" has a fixed size, so tablets and
+  phones with other shapes show it with black bars. The first time, the person at the PC must pick
+  "New Virtual Output" in KDE's window (it is remembered).
+- **Touches on the second screen move the pointer with relative moves** (the portal offers absolute
+  ones only for its own screen streams). This is exact when the screens' top edges line up, which
+  AIROX Connect arranges for the second screen; unusual layouts can put a touch slightly off. In
+  mirror mode touches go to the leftmost screen.
+- **The delay shown on the second screen is PC → phone:** from the frame being ready on the PC to it
+  being decoded on the phone. Capture, encoding and the phone's display add a few milliseconds
+  more. Without an NVIDIA or VA-API encoder, x264 encodes on the CPU.
+- **Wake-on-LAN needs the network card and firmware to allow it,** usually over Ethernet; most
+  laptops do not wake over Wi-Fi.
+- **The Task Manager shows GPU use per process only for NVIDIA** (`nvidia-smi pmon`), and no
+  per-process network use.
+- **A phone that is stolen while unlocked can use the PC on the same network** until it is removed
+  in AIROX Connect on the PC. Deleting, root, installing and commands also need the phone's screen
+  lock; ending programs, sending files and power actions need a tap.
+- **"Stay connected" keeps a foreground service** (a silent notification) so alerts and approvals
+  arrive when the app is closed; it uses some battery. It can be turned off in the app's settings.
+- **The automated end-to-end test's second-screen step is not reliable yet.** Run on its own it passes
+  (27–47 ms from the PC to the emulator's screen); in the full QEMU + emulator run the step that answers
+  KDE's "Screen Sharing" window for the first time can run out of time. The feature itself worked in
+  every run where the window was answered.
+- **AIRA from the phone needs AIRA running on the PC** (her side panel's server). The phone says so
+  when she is not.

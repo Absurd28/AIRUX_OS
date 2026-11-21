@@ -56,7 +56,18 @@ def state(orch, voice_session=None) -> dict:
                    "items": counts, "min_mb": 64, "max_mb": 2048},
         "model": {"server": orch.config.server_url, "recommendation": rec},
         "actions": actions,
+        "phones": _phones(),
     }
+
+
+def _phones() -> list[dict]:
+    """Phones paired with AIROX Connect (read-only here; pairing and removal are in its window)."""
+    try:
+        from ..tools.phone import call
+        return [{"name": p["name"], "online": p["online"], "battery": (p.get("status") or {}).get("battery")}
+                for p in call("phone_status", timeout=3)["phones"]]
+    except Exception:
+        return []
 
 
 def apply(orch, change: dict, voice_session=None) -> dict:
