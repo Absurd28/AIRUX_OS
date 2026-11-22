@@ -24,7 +24,7 @@ Init ()
 	then
 		exit 0
 	fi
-	echo -n " airux-nolock"
+	printf " airux-nolock"
 }
 
 Config ()

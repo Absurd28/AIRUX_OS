@@ -9,7 +9,7 @@
 [![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![llama.cpp](https://img.shields.io/badge/LLM-llama.cpp%20%C2%B7%20Qwen3.5-7cc4ff?style=for-the-badge)](https://github.com/ggml-org/llama.cpp)
 
-[![Tests](https://img.shields.io/badge/unit%20tests-249%20passing-59c38a?style=flat-square)](tests/unit)
+[![CI](https://github.com/Absurd28/AIRUX_OS/actions/workflows/ci.yml/badge.svg)](https://github.com/Absurd28/AIRUX_OS/actions/workflows/ci.yml)
 [![Eval](https://img.shields.io/badge/eval%20error%20rate-2.5%25%20of%20200-59c38a?style=flat-square)](docs/EVAL.md)
 [![Safety](https://img.shields.io/badge/unconfirmed%20risky%20actions-0-59c38a?style=flat-square)](docs/EVAL.md)
 [![Offline](https://img.shields.io/badge/runs-100%25%20offline-7cc4ff?style=flat-square)](docs/ARCHITECTURE.md)
@@ -141,13 +141,15 @@ The model tier is picked automatically from total memory (RAM plus VRAM):
 
 ## 📦 Installation guide
 
-> **A prebuilt ISO is not published yet:** the image (4.4 GB) is larger than GitHub's 2 GB
-> limit for release files. Build it with [Build from source](#-build-from-source), then follow
-> these steps.
+> **Download AIRUX 0.1** from the website, [absurd28.github.io/airux-website](https://absurd28.github.io/airux-website/download/)
+> (the 4.66 GB ISO is hosted on [SourceForge](https://sourceforge.net/projects/airux/files/0.1/),
+> as GitHub limits release files to 2 GB). Or build it yourself with
+> [Build from source](#-build-from-source).
 
 ### Step 1: Check the ISO
 
-The build writes `airux-0.1-amd64.hybrid.iso` and a `SHA256SUMS` file. Check that they match.
+Download `airux-0.1-amd64.hybrid.iso` and `SHA256SUMS` into the same folder (a build writes both),
+then check that they match.
 
 ```bash
 sha256sum -c SHA256SUMS            # Linux
@@ -285,7 +287,8 @@ python3 scripts/fetch_models.py --only qwen3.5-2b     # or just what you need
 ```bash
 python3 -m venv /srv/airux-work/venv
 /srv/airux-work/venv/bin/pip install -r requirements.lock -r requirements-dev.lock
-/srv/airux-work/venv/bin/python -m pytest -q tests/unit        # 233 tests
+/srv/airux-work/venv/bin/python -m pytest -q tests/unit        # 390 tests
+scripts/ci_lint.sh        # line endings, shellcheck, Python/JSON/TOML, launchers (as CI runs them)
 ```
 
 **6. Build the packages and the ISO** (as root)
@@ -412,14 +415,17 @@ docs/            architecture, USB guide, demo, evaluation reports
 - [ ] "Hey AIRA" wake word (openWakeWord)
 - [ ] Optional NVIDIA driver in the image
 - [ ] Legacy BIOS installs
-- [ ] Prebuilt ISO downloads
+- [x] Prebuilt ISO downloads ([the website](https://absurd28.github.io/airux-website/))
+- [x] CI on every push and pull request (unit tests and lint)
 
 ## 🤝 Contributing
 
-Issues and pull requests are welcome. Please run the unit tests before opening a PR:
+Issues and pull requests are welcome. CI runs the unit tests and the lint checks on every pull
+request; to run them yourself first:
 
 ```bash
 /srv/airux-work/venv/bin/python -m pytest -q tests/unit
+scripts/ci_lint.sh
 ```
 
 New tools must declare their risks so the permission broker can protect users, and must come with

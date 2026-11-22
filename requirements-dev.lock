@@ -4,3 +4,4 @@ pluggy==1.7.0
 iniconfig==2.3.1
 packaging==26.3
 Pygments==2.21.0
+PyYAML==6.0.3   # tests/unit/test_eval.py and tests/run_eval.py read the .yaml command files

@@ -1,0 +1,53 @@
+# Checks every push to main and every pull request. Both jobs run in Debian 13 (trixie), the same
+# base and Python (3.13) as the AIRUX image. The ISO build and the phase checks need models, KVM and
+# a GPU, so they stay local (see README, section 7).
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  lint:
+    name: Lint (line endings, shellcheck, Python/JSON/TOML, launchers)
+    runs-on: ubuntu-latest
+    container: debian:trixie
+    timeout-minutes: 10
+    steps:
+      - name: Tools
+        run: |
+          apt-get update -q
+          apt-get install -yq --no-install-recommends ca-certificates git python3 shellcheck desktop-file-utils
+      - uses: actions/checkout@v7
+      - name: Lint
+        run: scripts/ci_lint.sh
+
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    container: debian:trixie
+    timeout-minutes: 20
+    env:
+      PIP_CACHE_DIR: /github/home/.cache/pip
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+    steps:
+      - name: Tools
+        run: |
+          apt-get update -q
+          apt-get install -yq --no-install-recommends ca-certificates git python3 python3-venv
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
+        with:
+          path: /github/home/.cache/pip
+          key: pip-trixie-${{ hashFiles('requirements.lock', 'requirements-dev.lock') }}
+      - name: Install the pinned dependencies
+        run: |
+          python3 -m venv /opt/venv
+          /opt/venv/bin/pip install -q -r requirements.lock -r requirements-dev.lock
+      - name: Unit tests
+        run: /opt/venv/bin/python -m pytest -rs

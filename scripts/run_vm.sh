@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC2054  # the commas inside QEMU arguments are QEMU's own option syntax
 # Run AIRUX in a window on this PC: QEMU with KVM inside WSL2, shown through WSLg.
 #
 #   scripts/run_vm.sh live      try the live system (nothing is kept when you close it)

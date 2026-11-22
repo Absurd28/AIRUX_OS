@@ -12,7 +12,7 @@ for e in "$@"; do
         rm -rf "$dst/$e.new"
         cp -r "$src/$e" "$dst/$e.new"
         cp "$src/VERSION" "$dst/$e.new/.neox-version"
-        rm -rf "$dst/$e"
+        rm -rf "${dst:?}/$e"
         mv "$dst/$e.new" "$dst/$e"
     fi
     list="${list:+$list,}$dst/$e"

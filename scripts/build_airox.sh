@@ -32,7 +32,7 @@ mkdir -p "$STAGE"
 dpkg-deb -x "$SRC_DEB" "$STAGE"
 mv "$STAGE/usr/share/codium" "$APP"
 rm -rf "$STAGE/usr/share/applications" "$STAGE/usr/share/pixmaps" "$STAGE/usr/share/appdata" \
-       "$STAGE/usr/share/bash-completion" "$STAGE/usr/share/zsh" "$STAGE/usr/share/mime" "$STAGE/usr/bin"
+       "$STAGE/usr/share/bash-completion" "$STAGE/usr/share/zsh" "$STAGE/usr/share/mime" "${STAGE:?}/usr/bin"
 
 echo "== AIRA extension: unit tests on AIROX Code's own runtime"
 ELECTRON_RUN_AS_NODE=1 "$APP/codium" --test "$EXT"/test/*.test.js

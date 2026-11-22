@@ -2,7 +2,7 @@
 # AIRUX Task Manager (Ctrl+Shift+Esc): the window; its server runs as you, in AIRA's runtime so every
 # action passes AIRA's permission broker and is logged in her action log.
 f="${XDG_STATE_HOME:-$HOME/.local/state}/airux-taskmgr/ui.token"
-alive() { [ -r "$f" ] && read -r port token < "$f" && curl -fs -o /dev/null -m 2 "http://127.0.0.1:$port/logo.svg"; }
+alive() { [ -r "$f" ] && read -r port _ < "$f" && curl -fs -o /dev/null -m 2 "http://127.0.0.1:$port/logo.svg"; }
 if ! alive; then
     rm -f "$f"
     PYTHONPATH=/usr/lib/airux-taskmgr setsid /usr/lib/aira/run airux_taskmgr.app >/dev/null 2>&1 &
@@ -12,7 +12,7 @@ if ! alive; then
         sleep 0.25
     done
 fi
-read -r port token < "$f"
+read -r port _ < "$f"   # the token is not needed here: the server puts it in the page
 exec chromium --app="http://127.0.0.1:$port/" --class=airux-taskmgr --window-size=1060,720 \
     --no-first-run --noerrdialogs --password-store=basic \
     --user-data-dir="${XDG_DATA_HOME:-$HOME/.local/share}/airux-taskmgr/ui-profile"
