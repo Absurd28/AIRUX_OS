@@ -3,7 +3,7 @@
 ## What you need
 
 - A USB stick of 8 GB or more. **Everything on it is erased.**
-- The ISO, `airux-0.1-amd64.hybrid.iso` (3.76 GB). It is built in WSL at
+- The ISO, `airux-0.1-amd64.hybrid.iso` (4.66 GB). It is built in WSL at
   `/srv/airux-work/build/iso/`; from Windows open
   `\\wsl.localhost\Debian\srv\airux-work\build\iso\` in File Explorer and copy the ISO and
   `SHA256SUMS` somewhere local (for example Downloads).
