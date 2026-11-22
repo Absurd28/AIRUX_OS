@@ -295,7 +295,18 @@ sudo bash scripts/build_deb.sh      # -> /srv/airux-work/build/deb/*.deb
 sudo bash scripts/build_iso.sh      # -> /srv/airux-work/build/iso/airux-0.1-amd64.hybrid.iso
 ```
 
-**7. Test the image in QEMU (optional)**
+**7. Try it in a window, or test the image in QEMU (optional)**
+
+On Windows with WSL2, `scripts/run_vm.sh` runs the ISO in a window through WSLg, drawn with the PC's
+GPU (virgl and Mesa's d3d12 driver); add your user to the `kvm` group once.
+
+```bash
+scripts/run_vm.sh live       # try it; nothing is kept
+scripts/run_vm.sh install    # adds a 40 GB virtual disk for the installer
+scripts/run_vm.sh            # start the installed system
+```
+
+The automated checks:
 
 ```bash
 cp tests/phase8_vm.example.toml tests/phase8_vm.toml   # set a password for the test VM

@@ -126,6 +126,9 @@ firmware-intel-misc
 bluez-firmware
 intel-microcode
 amd64-microcode
+# memory: compressed swap in RAM (zram), so a full memory slows down instead of killing apps
+# (the live system and small machines have no other swap); see /etc/systemd/zram-generator.conf
+systemd-zram-generator
 # graphics: Vulkan and hardware video decoding
 mesa-vulkan-drivers
 va-driver-all

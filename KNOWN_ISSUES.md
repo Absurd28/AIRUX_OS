@@ -201,6 +201,16 @@ The phase each issue was found in is in brackets.
 - **The 9B model is slowed by slots on a 6 GB GPU.** The model and the parallel slots compete for
   VRAM, so speed is traded for slots. The median on the development machine (9B, 3 slots) is
   12 s per command. [1, 9]
+- **In a VM on a 16 GB Windows laptop, Windows is the limit.** With a 5 GB VM running, Windows had
+  1.8 GB free; with Steam, a browser and other apps open it starts paging and everything slows,
+  the VM included. Close large programs first, or give the VM less (`AIRUX_VM_MEM=4096`).
+- **Fixed after a slow VM report (2026-11-22):** the VM drew everything on the CPU (llvmpipe), and
+  NEOX's new tab animated two large blurs forever (about 70% of a core each for NEOX and KWin while
+  idle); the model took every vCPU while answering; the live system had no swap. Now
+  `scripts/run_vm.sh` gives the VM the PC's GPU (virgl through WSLg's d3d12) and 6 vCPUs, the new
+  tab is static, a CPU-only model leaves one core free, and zram adds compressed swap. Mouse input
+  in the GPU window is untested by script (Windows does not forward synthetic clicks into WSLg);
+  `AIRUX_VM_GPU=0` returns to software drawing.
 
 ## Voice
 

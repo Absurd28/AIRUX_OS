@@ -11,6 +11,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from .plan import Plan
+from .probe import count_cores
 
 WORK = Path(os.environ.get("AIRUX_WORK", "/srv/airux-work"))
 BENCH_PROMPT = ("List the planets of the solar system in order from the Sun, "
@@ -40,6 +41,22 @@ def server_binary(use_gpu: bool) -> Path:
     raise FileNotFoundError(f"llama-server not found in {cuda.parent} or {cpu.parent}")
 
 
+def cpu_threads_for_model(available: int | None = None, physical: int | None = None) -> int:
+    """Threads for CPU-only inference: llama.cpp's own default (the physical cores), but never
+    every usable CPU, so one stays free for the desktop. A single CPU keeps its one thread."""
+    if available is None:
+        try:
+            available = len(os.sched_getaffinity(0))
+        except (AttributeError, OSError):
+            available = os.cpu_count() or 1
+    if physical is None:
+        try:
+            physical = count_cores(Path("/proc/cpuinfo").read_text())[0]
+        except OSError:
+            physical = available
+    return max(1, min(physical, available - 1))
+
+
 FIT_TARGET_MIB = int(os.environ.get("AIRUX_FIT_TARGET_MIB", "1024"))  # llama.cpp default 1024
 
 
@@ -53,7 +70,10 @@ def server_command(p: Plan, port: int, host: str = "127.0.0.1") -> list[str]:
         "--cache-ram", str(p.cache_ram_mib),  # bounded; llama.cpp's default (8192 MiB) can OOM
     ]
     if not p.use_gpu:
-        cmd += ["--n-gpu-layers", "0"]
+        # on the CPU llama.cpp takes every core while it answers, and the desktop stops responding
+        # (seen in a 4-core VM); one core stays free for the user
+        n = cpu_threads_for_model()
+        cmd += ["--n-gpu-layers", "0", "--threads", str(n), "--threads-batch", str(n)]
     else:
         # --n-gpu-layers is left unset so llama.cpp's --fit (default on) offloads as many
         # layers as fit in free VRAM, keeping FIT_TARGET_MIB free for the desktop

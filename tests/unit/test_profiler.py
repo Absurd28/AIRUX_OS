@@ -212,3 +212,25 @@ def test_real_2b_metadata_matches_fixture():
     md = read_metadata(REAL_MODELS / "Qwen3.5-2B-Q4_K_M.gguf")
     for k, v in QWEN35_2B_META.items():
         assert md[k] == v, k
+
+
+@pytest.mark.parametrize("available,physical,want", [
+    (4, 4, 3),     # 4-vCPU VM: one core left for the desktop
+    (12, 8, 8),    # i5-13420H, 8 cores / 12 threads: llama.cpp's default, all free anyway
+    (8, 8, 7),
+    (2, 2, 1),
+    (1, 1, 1),     # a single CPU keeps its one thread
+])
+def test_cpu_threads_leave_one_core(available, physical, want):
+    from aira.profiler.launch import cpu_threads_for_model
+    assert cpu_threads_for_model(available, physical) == want
+
+
+def test_cpu_server_command_sets_threads(fake_models, monkeypatch):
+    from aira.profiler import launch
+    p = planmod.plan(hw(5, 0, free_ram_gb=4, cores=4), fake_models)
+    assert not p.use_gpu
+    monkeypatch.setattr(launch, "server_binary", lambda use_gpu: Path("/x/llama-server"))
+    monkeypatch.setattr(launch, "cpu_threads_for_model", lambda: 3)
+    cmd = launch.server_command(p, 8080)
+    assert cmd[cmd.index("--threads") + 1] == "3" and cmd[cmd.index("--threads-batch") + 1] == "3"
