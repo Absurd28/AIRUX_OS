@@ -20,6 +20,14 @@ need() {
     return 1
 }
 
+# Every check below lists files with git; if git can't read the repository, stop rather than
+# "pass" on an empty list.
+if ! tracked=$(git ls-files | wc -l) || [ "$tracked" -eq 0 ]; then
+    echo "FAIL: git ls-files lists no files (not a git checkout, or git refuses it)"
+    exit 1
+fi
+echo "$tracked tracked files"
+
 step "Line endings"
 crlf=$(git ls-files --eol | awk '$1 ~ /crlf|mixed/ || $2 ~ /crlf|mixed/ { sub(/^[^\t]*\t/, ""); print }')
 if [ -n "$crlf" ]; then bad "CRLF line endings in:"; echo "$crlf"; else echo "ok"; fi

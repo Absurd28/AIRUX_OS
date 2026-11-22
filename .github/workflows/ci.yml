@@ -25,7 +25,10 @@ jobs:
           apt-get install -yq --no-install-recommends ca-certificates git python3 shellcheck desktop-file-utils
       - uses: actions/checkout@v7
       - name: Lint
-        run: scripts/ci_lint.sh
+        run: |
+          # the checkout belongs to the runner's user, not the container's root
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          scripts/ci_lint.sh
 
   unit:
     name: Unit tests
@@ -39,7 +42,9 @@ jobs:
       - name: Tools
         run: |
           apt-get update -q
-          apt-get install -yq --no-install-recommends ca-certificates git python3 python3-venv
+          # chromium: the browser and shell tests drive Debian's Chromium, as AIRA does on AIRUX;
+          # libatomic1: Playwright's bundled Node needs it
+          apt-get install -yq --no-install-recommends ca-certificates git python3 python3-venv chromium libatomic1
       - uses: actions/checkout@v7
       - uses: actions/cache@v6
         with:
