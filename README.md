@@ -141,7 +141,7 @@ The model tier is picked automatically from total memory (RAM plus VRAM):
 
 ## 📦 Installation guide
 
-> **Download AIRUX 0.1** from the website, [absurd28.github.io/airux-website](https://absurd28.github.io/airux-website/download/)
+> **Download AIRUX 0.1** from the website, [airux-os.pages.dev](https://airux-os.pages.dev/download/)
 > (the 4.66 GB ISO is hosted on [SourceForge](https://sourceforge.net/projects/airux/files/0.1/),
 > as GitHub limits release files to 2 GB). Or build it yourself with
 > [Build from source](#-build-from-source).
@@ -415,7 +415,7 @@ docs/            architecture, USB guide, demo, evaluation reports
 - [ ] "Hey AIRA" wake word (openWakeWord)
 - [ ] Optional NVIDIA driver in the image
 - [ ] Legacy BIOS installs
-- [x] Prebuilt ISO downloads ([the website](https://absurd28.github.io/airux-website/))
+- [x] Prebuilt ISO downloads ([the website](https://airux-os.pages.dev/))
 - [x] CI on every push and pull request (unit tests and lint)
 
 ## 🤝 Contributing
