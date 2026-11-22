@@ -16,6 +16,7 @@
 
 [Features](#-features) ·
 [Screenshots](#-screenshots) ·
+[Phone app](#-airox-connect-airux-on-your-phone) ·
 [Installation](#-installation-guide) ·
 [Build from source](#-build-from-source) ·
 [Architecture](#-architecture) ·
@@ -64,7 +65,7 @@ prompts:
 | 🦠 **Phagos antivirus** | AIRUX's own antivirus, designed like an immune system: real-time protection (files are checked as they are written, and malicious programs are not allowed to start), in-house signature rules, **Negative Selection** and **Clonal Selection** (artificial immune system) and the **Dendritic Cell Algorithm** from Danger Theory, which pauses a program that starts encrypting your files and lets you decide. Quarantine, scans, protection history and a Windows Security-style app; ask AIRA "is my computer protected?" |
 | 🧩 **AIRUX Drivers** | Like Windows' Device Manager: shows whether Wi-Fi, Ethernet, Bluetooth, graphics, sound, camera, touchpad and battery work, and why a part does not (missing firmware, switched off, no driver). One click installs the fix, including **NVIDIA's driver** with the Secure Boot key step. It also does device firmware updates (fwupd) and saves a hardware report. The ISO ships Debian's firmware for Wi-Fi, Bluetooth, GPUs and laptop audio. Ask AIRA "why isn't my Wi-Fi working?" |
 | 📊 **Task Manager** | AIRUX's own Task Manager, like Windows 11's (**Ctrl+Shift+Esc**): apps, background and system processes with CPU, memory, disk and GPU use; live performance graphs for CPU, memory, disks, network and GPU; startup apps; users; details; services. Ending a program or stopping a service asks first and is logged, like every AIRA action. |
-| 📱 **AIROX Connect** | An Android app for your phone or tablet, paired with the PC by QR code, on the same network: talk to AIRA by text or voice (she answers on the phone in her own voice), see running apps and what AIRA is doing, use the Task Manager, send files and media both ways, share the clipboard and links, use the phone as touchpad, keyboard and media remote, glance at the screen, make the phone or tablet a **second screen** with touch, lock, sleep or wake the PC, and get AIRA's reminders and Phagos alerts as notifications. Encrypted to your PC's own certificate, and every action passes AIRA's permission broker (risky ones are approved on the phone). |
+| 📱 **[AIROX Connect](https://github.com/Absurd28/AIROX_Connect)** | An Android app for your phone or tablet, paired with the PC by QR code, on the same network: talk to AIRA by text or voice (she answers on the phone in her own voice), see running apps and what AIRA is doing, use the Task Manager, send files and media both ways, share the clipboard and links, use the phone as touchpad, keyboard and media remote, glance at the screen, make the phone or tablet a **second screen** with touch, lock, sleep or wake the PC, and get AIRA's reminders and Phagos alerts as notifications. Encrypted to your PC's own certificate, and every action passes AIRA's permission broker (risky ones are approved on the phone). |
 | 🎮 **Offline games** | Chess against Stockfish (Knights), Sudoku, Solitaire, Mahjongg, Minesweeper, Reversi, Four in a Row, Gomoku, nonograms, falling blocks, Breakout and more from KDE, plus **AIRUX Snake**, our own take on the classic snake game. All of them work without internet. |
 | 💿 **Real OS image** | A live ISO with AIRUX branding, a Plymouth splash and the Calamares installer. It is tested end to end in QEMU: boot, install, then AIRA answering by voice. |
 
@@ -96,6 +97,31 @@ come from the real local model (the 2B tier, on 4 CPU cores), and pages are real
 | <img src="docs/screenshots/vm-install-done.png" width="420"/> | <img src="docs/screenshots/vm-installed-desktop.png" width="420"/> |
 
 </div>
+
+## 📱 AIROX Connect: AIRUX on your phone
+
+**[AIROX Connect](https://github.com/Absurd28/AIROX_Connect)** is the Android app for AIRUX, in its own
+repository. Pair your phone or tablet with the PC by QR code, then talk to AIRA (she answers in her
+own voice), watch and manage what the PC is running, send files both ways, use the phone as a
+touchpad, or drag a window onto it as a **second screen**. It works on your own network with no
+cloud, the connection is encrypted to your PC's own certificate, and every action goes through
+AIRA's permission broker on the PC.
+
+<div align="center">
+
+| Home | Talk to AIRA | Task Manager | Risky actions ask first |
+| :---: | :---: | :---: | :---: |
+| <img src="docs/screenshots/connect-home.png" width="200"/> | <img src="docs/screenshots/connect-aira.png" width="200"/> | <img src="docs/screenshots/connect-tasks.png" width="200"/> | <img src="docs/screenshots/connect-approval.png" width="200"/> |
+
+**Second screen: the PC's Task Manager, dragged onto the phone**
+
+<img src="docs/screenshots/connect-second-screen.png" width="760"/>
+
+</div>
+
+The PC side (`airox-connectd` and the **AIROX Connect** window) ships in the ISO; the app is in
+[Absurd28/AIROX_Connect](https://github.com/Absurd28/AIROX_Connect). Setup is
+[Step 6](#step-6-connect-your-android-phone-optional) of the installation guide.
 
 ## 💻 System requirements
 
@@ -189,10 +215,17 @@ The full guide, with troubleshooting (no boot, black screen, no sound, no microp
 
 ### Step 6: Connect your Android phone (optional)
 
+The phone app is **AIROX Connect**: source, screenshots and build steps are at
+**[github.com/Absurd28/AIROX_Connect](https://github.com/Absurd28/AIROX_Connect)**.
+
 1. On the PC, open **AIROX Connect** from the Start menu and turn on **Allow phone connections**.
-2. Get the app: click **Share the app** and scan the code with the phone's camera (or copy
-   `/usr/share/airox-connect/airox-connect.apk` to the phone). Open the file and allow installing
-   from that source. Android 10 or newer.
+2. Get the app (Android 10 or newer), either way:
+   - click **Share the app** and scan the code with the phone's camera, or copy
+     `/usr/share/airox-connect/airox-connect.apk` to the phone;
+   - or build it from the [AIROX Connect repository](https://github.com/Absurd28/AIROX_Connect)
+     (`./gradlew assembleDebug`).
+
+   Open the APK and allow installing from that source.
 3. In the app tap **Scan the pairing code**, then click **Show pairing code** on the PC and point the
    phone at it. Click **Allow** on the PC.
 4. The phone and the PC must be on the same network. For the second screen and the touchpad, KDE asks
